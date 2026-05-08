@@ -1,0 +1,30 @@
+# Claude Code
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+*.egg-info/
+
+# Local environment artifacts (not source)
+dyp/
+
+# macOS
+.DS_Store
+
+# Node (react_frontend; any stray root node_modules from old setups)
+node_modules/
+
+# Stray root lockfile from old setups
+/package-lock.json
+
+# IDE
+.idea/
+.vscode/
+
+# Generated markers (可選：如果不想上傳印好的圖片就取消註解)
+# markers/
