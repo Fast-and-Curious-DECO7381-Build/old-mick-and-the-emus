@@ -10,7 +10,6 @@ import random
 from dataclasses import dataclass, field
 
 GRID_COLS, GRID_ROWS = 12, 12
-TIER_THRESHOLDS = (4, 8, 12, 16)
 ATK_TIER_THRESHOLDS = (4, 8)
 DEF_ZONE_RADIUS_T1 = 1
 DEF_ZONE_RADIUS_T2 = 2
@@ -41,8 +40,6 @@ class GameModel:
     hq_p1: tuple
     hq_p2: tuple
     rng: random.Random = field(default_factory=random.Random)
-    tier_p1: int = 0
-    tier_p2: int = 0
     damage: dict = field(default_factory=dict)
     destroyed: set = field(default_factory=set)
     hard_damage: dict = field(default_factory=dict)
@@ -139,29 +136,6 @@ class GameModel:
     def _attrition_threshold(self, side: str) -> int:
         return self._resource_cell_total(side)
 
-    def _progress_points(self, player: str) -> int:
-        enemy_side = "p2" if player == "p1" else "p1"
-        return self._destroyed_resource_cells(enemy_side)
-
-    def _tier_from_progress(self, progress: int) -> int:
-        tier = 0
-        for index, threshold in enumerate(TIER_THRESHOLDS, start=1):
-            if progress >= threshold:
-                tier = index
-        return tier
-
-    def _sync_tiers_from_progress(self) -> None:
-        self.tier_p1 = max(self.tier_p1, self._tier_from_progress(self._progress_points("p1")))
-        self.tier_p2 = max(self.tier_p2, self._tier_from_progress(self._progress_points("p2")))
-
-    def _attacker_splash_count(self, attacker: str) -> int:
-        tier = self.tier_p1 if attacker == "p1" else self.tier_p2
-        if tier >= 3:
-            return 2
-        if tier >= 1:
-            return 1
-        return 0
-
     def _atk_destroyed_count(self, attacker: str, role: str) -> int:
         return int(self.atk_destroyed_counts.get(attacker, {}).get(role, 0))
 
@@ -234,7 +208,6 @@ class GameModel:
                 self.win_reason = ("homestead" if enemy_side == "p1" else "nest") + "_destroyed"
                 events.append({"type": "hq_destroyed", "side": enemy_side})
             else:
-                self._sync_tiers_from_progress()
                 if self._destroyed_resource_cells(enemy_side) >= self._attrition_threshold(enemy_side):
                     self.winner = attacker
                     self.win_reason = "attrition"
@@ -317,7 +290,6 @@ class GameModel:
                 "nuke": True,
             })
 
-        self._sync_tiers_from_progress()
         if self._destroyed_resource_cells(enemy_side) >= self._attrition_threshold(enemy_side):
             self.winner = attacker
             self.win_reason = "attrition"
@@ -325,18 +297,20 @@ class GameModel:
         return events
 
     def _resolve_shot(self, attacker: str, attacker_role: str, start, direction: str, defender_def_pos):
-        """Fire one ray. Returns list of events for this shot."""
+        """Fire one ray. Returns (events, path) for this shot."""
         if start[0] is None or direction not in DIR_VEC:
-            return []
+            return [], []
         enemy_side = "p2" if attacker == "p1" else "p1"
         dc, dr = DIR_VEC[direction]
         c, r = start[0] + dc, start[1] + dr
         events = []
+        path = []
 
         while 0 <= c < GRID_COLS and 0 <= r < GRID_ROWS:
             cell = (c, r)
 
             if self._cell_is_hard(cell):
+                path.append({"col": c, "row": r, "hit": True, "type": "terrain"})
                 self.hard_damage[cell] = self.hard_damage.get(cell, 0) + 1
                 if self.hard_damage[cell] >= HARD_TERRAIN_HP:
                     self.hard_gone.add(cell)
@@ -348,8 +322,9 @@ class GameModel:
                         "remaining_hp": HARD_TERRAIN_HP - self.hard_damage[cell],
                         "required_hp": HARD_TERRAIN_HP,
                     })
-                return events
+                return events, path
             if self._cell_is_soft(cell):
+                path.append({"col": c, "row": r, "hit": True, "type": "terrain"})
                 self.soft_damage[cell] = self.soft_damage.get(cell, 0) + 1
                 if self.soft_damage[cell] >= SOFT_TERRAIN_HP:
                     self.soft_gone.add(cell)
@@ -361,20 +336,24 @@ class GameModel:
                         "remaining_hp": SOFT_TERRAIN_HP - self.soft_damage[cell],
                         "required_hp": SOFT_TERRAIN_HP,
                     })
-                return events
+                return events, path
 
             if (
                 _side_of(c, r) == enemy_side
                 and cell not in self.destroyed
                 and self._cell_is_attackable_target(cell, enemy_side)
             ):
+                path.append({"col": c, "row": r, "hit": True, "type": "territory"})
                 events.extend(self._apply_hit(attacker, attacker_role, enemy_side, cell, defender_def_pos, splash=False))
+                if any(event.get("type") == "hq_destroyed" for event in events):
+                    path[-1]["type"] = "hq"
                 if not self._is_hq_cell(enemy_side, cell):
                     events.extend(self._apply_splash_hits(attacker, attacker_role, enemy_side, cell, defender_def_pos))
-                return events
+                return events, path
+            path.append({"col": c, "row": r, "hit": False, "type": "path"})
             c += dc
             r += dr
-        return events
+        return events, path
 
     def on_turn_change(self, new_turn, tokens_p1, tokens_p2):
         """Resolve the outgoing player's shots, then advance."""
@@ -414,16 +393,26 @@ class GameModel:
             if start[0] is None or direction is None:
                 print("    → skipped (marker not visible / no direction)")
                 continue
-            shot_events = self._resolve_shot(attacker, role, start, direction, def_pos)
+            shot_events, path = self._resolve_shot(attacker, role, start, direction, def_pos)
+            events.append({
+                "type": "ray_complete",
+                "token": f"{attacker}_{role}",
+                "start": list(start),
+                "direction": direction,
+                "path": path,
+            })
             for event in shot_events:
                 print(f"    → {event['type']} {event.get('cell', '')}")
             events += shot_events
 
+        events.append({
+            "type": "attack_result",
+            "by": attacker,
+            "successful": sum(1 for event in events if event.get("type") == "cell_destroyed"),
+        })
         return events
 
     def snapshot(self):
-        progress_p1 = self._progress_points("p1")
-        progress_p2 = self._progress_points("p2")
         atk_tiers = {
             side: {role: self._atk_tier(side, role) for role in ("atk_a", "atk_b")}
             for side in ("p1", "p2")
@@ -452,13 +441,8 @@ class GameModel:
             },
             "atk_tiers": atk_tiers,
             "atk_tier_thresholds": list(ATK_TIER_THRESHOLDS),
-            "progress_p1": progress_p1,
-            "progress_p2": progress_p2,
             "attrition_threshold": self._attrition_threshold("p1"),
             "resource_cell_total": self._resource_cell_total("p1"),
-            "tier_thresholds": list(TIER_THRESHOLDS),
-            "tier_p1": self.tier_p1,
-            "tier_p2": self.tier_p2,
             "nuke_used_p1": self.nuke_used_p1,
             "nuke_used_p2": self.nuke_used_p2,
             "nuke_available_p1": self._nuke_available("p1"),

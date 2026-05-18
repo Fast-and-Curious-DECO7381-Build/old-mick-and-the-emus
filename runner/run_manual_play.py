@@ -8,19 +8,18 @@ actions instead of ArUco markers.
 from __future__ import annotations
 
 import asyncio
-import functools
-import http.server
 import json
 from pathlib import Path
 import queue
-import socketserver
 import sys
 import threading
 import time
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+BACKEND_DIR = ROOT_DIR / "backend"
+for import_root in (ROOT_DIR, BACKEND_DIR):
+    if str(import_root) not in sys.path:
+        sys.path.insert(0, str(import_root))
 
 from bridge.transport.websocket_transport import WS_HOST, WS_PORT, broadcast, drain_actions, run_server
 from runner.setup_flow import (
@@ -35,11 +34,12 @@ from runner.setup_flow import (
     sanitize_token_states,
 )
 from live_rules import game_model, terrain_gen
+from runner.frontend_static_server import start_frontend_http_server
 
 
 SEND_FPS = 10
 HTTP_PORT = 8080
-FRONTEND_DIR = ROOT_DIR / "yu_test3" / "frontend"
+FRONTEND_DIR = ROOT_DIR / "frontend"
 PHASE_MODE_SELECT = "mode_select"
 MODE_NORMAL = "normal"
 MODE_TUTORIAL = "tutorial"
@@ -58,17 +58,6 @@ ANGLE_BY_DIRECTION = {
     "N": 270.0,
     "NE": 315.0,
 }
-
-
-def start_http_server(port: int, root: Path):
-    """Serve the yu_test3 frontend over plain HTTP for manual play."""
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(root))
-    socketserver.TCPServer.allow_reuse_address = True
-    httpd = socketserver.TCPServer(("", port), handler)
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    print(f"[HTTP] Serving {root} at http://localhost:{port}")
-    return httpd
-
 
 def _manual_empty_token() -> dict:
     return {
@@ -142,8 +131,6 @@ def _print_help() -> None:
     print("  turn 2")
     print("  flip")
     print("  new_map")
-    print("  tier 1 +1")
-    print("  tier 2 -1")
     print("  quit")
 
 
@@ -229,18 +216,6 @@ def _parse_terminal_command(line: str) -> dict | None:
         if turn not in (1, 2):
             raise ValueError("turn must be 1 or 2")
         return {"type": "turn", "turn": turn}
-
-    if name == "tier":
-        if len(parts) != 3:
-            raise ValueError("usage: tier 1 +1")
-        try:
-            player = int(parts[1])
-            delta = int(parts[2])
-        except ValueError as exc:
-            raise ValueError("tier expects an integer player and integer delta") from exc
-        if player not in (1, 2):
-            raise ValueError("tier player must be 1 or 2")
-        return {"type": "tier", "player": player, "delta": delta}
 
     if name == "nuke":
         if len(parts) != 3:
@@ -383,27 +358,6 @@ class Session:
                 print(f"[{source}] Invalid mode selection")
             else:
                 print(f"[{source}] Mode already locked: {self.selected_mode}")
-            return events, errors
-
-        if command_type == "tier":
-            if self.model is None:
-                print(f"[{source}] Ignored tier change until the game starts")
-                return events, errors
-            try:
-                player = int(command.get("player"))
-                delta = int(command.get("delta"))
-            except (TypeError, ValueError):
-                print(f"[{source}] Ignored invalid tier command")
-                return events, errors
-
-            if player == 1:
-                self.model.tier_p1 = max(0, min(4, self.model.tier_p1 + delta))
-                print(f"[{source}] P1 tier -> {self.model.tier_p1}")
-            elif player == 2:
-                self.model.tier_p2 = max(0, min(4, self.model.tier_p2 + delta))
-                print(f"[{source}] P2 tier -> {self.model.tier_p2}")
-            else:
-                print(f"[{source}] Ignored invalid tier player")
             return events, errors
 
         if action_name == "choose_side":
@@ -716,7 +670,7 @@ async def async_main() -> None:
     if not FRONTEND_DIR.is_dir():
         raise RuntimeError(f"Missing frontend directory: {FRONTEND_DIR}")
 
-    start_http_server(HTTP_PORT, FRONTEND_DIR)
+    start_frontend_http_server(HTTP_PORT, FRONTEND_DIR, ROOT_DIR / "protocol")
 
     print("=" * 55)
     print("  Old Mick Manual Play")
