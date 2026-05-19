@@ -1,5 +1,3 @@
-import { buildHelpPopupTemplate, HELP_POPUP_SELECTORS } from "./help/helpPopupTemplate.js";
-
 /**
  * ui.js — HTML panel updater for Prototype 4.
  * Subscribes to WSClient and reflects every state change into the DOM.
@@ -34,10 +32,18 @@ function countProtectedResources(side, def, state, defTier) {
   if (!def || def.col == null || def.row == null) return 0;
   const resources = state.terrain?.[`${side}_resources`] || [];
   const destroyed = new Set((state.game?.destroyed || []).map(([c, r]) => `${c},${r}`));
+  const consumed = new Set();
+  const anchor = state.game?.def_anchor_cells?.[side];
+  if (Array.isArray(anchor) && anchor[0] === def.col && anchor[1] === def.row) {
+    for (const cell of state.game?.def_consumed_cells?.[side] || []) {
+      consumed.add(`${cell[0]},${cell[1]}`);
+    }
+  }
   const radius = defTier >= 1 ? 2 : 1;
   return resources.filter((resource) => {
     const key = `${resource.col},${resource.row}`;
     return !destroyed.has(key)
+      && !consumed.has(key)
       && Math.abs(resource.col - def.col) <= radius
       && Math.abs(resource.row - def.row) <= radius;
   }).length;
@@ -80,47 +86,59 @@ function onState(s) {
   }
 }
 
-// ─── Help popup ───────────────────────────────────────────────────────────────
+// ─── Help overlay (how-to-play) ───────────────────────────────────────────────
+
+const HELP_IFRAME_SRC = "how-to-play/index.html";
 
 let _helpRoot = null;
+let _helpUserClosed = false;
+let _helpWasVisible = false;
+let _helpMessageBound = false;
+
+function _bindHelpMessageListener() {
+  if (_helpMessageBound) return;
+  _helpMessageBound = true;
+  window.addEventListener("message", (event) => {
+    if (event.data === "closeHowToPlay") {
+      _helpUserClosed = true;
+      if (_helpRoot) _helpRoot.style.display = "none";
+    }
+  });
+}
 
 function _ensureHelpPopup() {
   if (_helpRoot) return _helpRoot;
 
+  _bindHelpMessageListener();
+
   _helpRoot = document.createElement("div");
-  _helpRoot.style.position = "fixed";
-  _helpRoot.style.inset = "0";
-  _helpRoot.style.zIndex = "1200";
-  _helpRoot.style.display = "none";
-  _helpRoot.innerHTML = buildHelpPopupTemplate({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
+  _helpRoot.id = "help-overlay-root";
+  _helpRoot.style.cssText =
+    "position:fixed;inset:0;width:100%;height:100%;z-index:1200;display:none;";
+
+  const iframe = document.createElement("iframe");
+  iframe.src = HELP_IFRAME_SRC;
+  iframe.title = "How to Play";
+  iframe.style.cssText = "width:100%;height:100%;border:0;display:block;";
+
+  _helpRoot.appendChild(iframe);
   document.body.appendChild(_helpRoot);
-
-  _helpRoot.querySelectorAll(HELP_POPUP_SELECTORS.close).forEach((button) => {
-    button.addEventListener("click", () => {
-      _helpRoot.style.display = "none";
-    });
-  });
-  _helpRoot.querySelectorAll(HELP_POPUP_SELECTORS.tabButton).forEach((button) => {
-    button.addEventListener("click", () => {
-      const tab = button.dataset.tabBtn;
-      _helpRoot.querySelectorAll(HELP_POPUP_SELECTORS.tabButton).forEach((el) => {
-        el.classList.toggle("is-active", el === button);
-      });
-      _helpRoot.querySelectorAll(HELP_POPUP_SELECTORS.tabPane).forEach((pane) => {
-        pane.classList.toggle("is-active", pane.dataset.tabPane === tab);
-      });
-    });
-  });
-
   return _helpRoot;
 }
 
 function _setHelpVisible(visible) {
   const root = _ensureHelpPopup();
-  root.style.display = visible ? "block" : "none";
+  if (visible && !_helpWasVisible) {
+    _helpUserClosed = false;
+  }
+  _helpWasVisible = visible;
+
+  if (visible && !_helpUserClosed) {
+    root.style.display = "block";
+  } else if (!visible) {
+    root.style.display = "none";
+    _helpUserClosed = false;
+  }
 }
 
 function _updateModeOverlay(state) {

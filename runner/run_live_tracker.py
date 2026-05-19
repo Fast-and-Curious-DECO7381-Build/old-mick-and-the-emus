@@ -31,11 +31,12 @@ from python_tracker.tracked_markers import CONFIRM_MARKERS, HELP_MARKERS, HQ_MAR
 from runner.setup_flow import FIRST_PLAYER_SIDE_TO_PLAYER, PHASE_GAME, PHASE_HQ_PLACEMENT, PLAYERS, SetupState, dedupe_errors, is_valid_hq_position, make_error, new_side_state, sanitize_token_states, side_of_cell
 from live_rules import game_model, terrain_gen, tutorial
 from runner.frontend_static_server import start_frontend_http_server
+from runner.port_check import DEFAULT_HTTP_PORT, ensure_ports_available
 
 
 DEFAULT_CAMERA_ID = 0 if sys.platform == "darwin" else 1
 SEND_FPS = 10
-HTTP_PORT = 8080
+HTTP_PORT = DEFAULT_HTTP_PORT
 HEADLESS = os.environ.get("DYP_HEADLESS", "").strip().lower() in ("1", "true", "yes", "on")
 SETUP_MARKER_STABLE_SECONDS = 0.35
 FRONTEND_DIR = ROOT_DIR / "frontend"
@@ -409,6 +410,19 @@ class Session:
         self.battle_waiting_for_side: str | None = None
         self._pending_nuke_cell: dict[str, tuple[int, int] | None] = {side: None for side in PLAYERS}
 
+    def _pending_nuke_payload(self, side: str | None) -> dict | None:
+        if side not in PLAYERS:
+            return None
+        cell = self._pending_nuke_cell.get(side)
+        if cell is None:
+            return None
+        return {
+            "side": side,
+            "col": cell[0],
+            "row": cell[1],
+            "marker_id": 19 if side == "p1" else 29,
+        }
+
     def _battle_payload(self) -> dict:
         if self.setup.phase != PHASE_GAME:
             return {
@@ -428,6 +442,7 @@ class Session:
                 "status_message": f"{self.battle_active_side.upper()} positioning active. Arrange that side's tokens, then scan ID{confirm_id} to attack.",
                 "turn_marker_id": marker_id,
                 "confirm_marker_id": confirm_id,
+                "pending_nuke": self._pending_nuke_payload(self.battle_active_side),
             }
 
         waiting_side = self.battle_waiting_for_side
@@ -458,6 +473,21 @@ class Session:
 
         if command_type == "new_map":
             self.reset(board_scan_ready=board_scan_ready)
+            return errors
+
+        if command_type == "tier":
+            if self.model is None:
+                return errors
+            try:
+                player = int(command.get("player"))
+                delta = int(command.get("delta"))
+            except (TypeError, ValueError):
+                return errors
+
+            if player == 1:
+                self.model.tier_p1 = max(0, min(4, self.model.tier_p1 + delta))
+            elif player == 2:
+                self.model.tier_p2 = max(0, min(4, self.model.tier_p2 + delta))
             return errors
 
         if action_name == "select_mode":
@@ -747,6 +777,25 @@ class Session:
         print("[MAP] HQ setup complete. Hidden HQs locked in.")
 
 
+def _process_camera_frame(
+    frame,
+    detector,
+    last_visible_snapshot: dict | None,
+    last_calibrated_snapshot: dict | None,
+) -> tuple[dict, dict | None, dict | None]:
+    """Blocking ArUco + snapshot work (run via asyncio.to_thread)."""
+    snapshot, _ = build_tracker_preview(frame, detector)
+    if snapshot.get("calibration_ready"):
+        last_calibrated_snapshot = snapshot
+    effective_snapshot = apply_calibration_fallback(snapshot, last_calibrated_snapshot)
+
+    if _snapshot_has_detected_markers(effective_snapshot):
+        last_visible_snapshot = _merge_visible_snapshot(last_visible_snapshot, effective_snapshot)
+
+    snapshot_for_ui = last_visible_snapshot or effective_snapshot
+    return snapshot_for_ui, last_visible_snapshot, last_calibrated_snapshot
+
+
 async def publish_live_tracker(camera_id: int = DEFAULT_CAMERA_ID, send_fps: int = SEND_FPS):
     session = Session()
     interval = 1.0 / send_fps
@@ -769,21 +818,20 @@ async def publish_live_tracker(camera_id: int = DEFAULT_CAMERA_ID, send_fps: int
 
     try:
         while True:
-            ret, frame = cap.read()
+            tick_started = time.perf_counter()
+            ret, frame = await asyncio.to_thread(cap.read)
             if not ret:
                 print("[Camera] WARNING: Frame read failed - retrying...")
                 await asyncio.sleep(0.1)
                 continue
 
-            snapshot, _ = build_tracker_preview(frame, detector)
-            if snapshot.get("calibration_ready"):
-                last_calibrated_snapshot = snapshot
-            effective_snapshot = apply_calibration_fallback(snapshot, last_calibrated_snapshot)
-
-            if _snapshot_has_detected_markers(effective_snapshot):
-                last_visible_snapshot = _merge_visible_snapshot(last_visible_snapshot, effective_snapshot)
-
-            snapshot_for_ui = last_visible_snapshot or effective_snapshot
+            snapshot_for_ui, last_visible_snapshot, last_calibrated_snapshot = await asyncio.to_thread(
+                _process_camera_frame,
+                frame,
+                detector,
+                last_visible_snapshot,
+                last_calibrated_snapshot,
+            )
             board_scan_ready = bool(snapshot_for_ui.get("calibration_ready"))
             turn_angle = _turn_angle(snapshot_for_ui)
 
@@ -809,12 +857,19 @@ async def publish_live_tracker(camera_id: int = DEFAULT_CAMERA_ID, send_fps: int
             await broadcast(json.dumps(payload))
 
             if not HEADLESS:
-                annotated = annotate_tracker_preview(frame.copy(), snapshot_for_ui)
+                annotated = await asyncio.to_thread(annotate_tracker_preview, frame.copy(), snapshot_for_ui)
                 cv2.imshow("Old Mick MVP - Camera View  [Q to quit]", annotated)
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord("q"), ord("Q"), 27):
                     print("[Camera] Quit signal received.")
                     break
+
+            elapsed = time.perf_counter() - tick_started
+            if elapsed > interval * 0.85:
+                print(
+                    f"[Camera] Slow tick {elapsed * 1000:.0f}ms "
+                    f"(budget {interval * 1000:.0f}ms) — WS heartbeat may lag"
+                )
 
             await asyncio.sleep(interval)
     finally:
@@ -856,12 +911,18 @@ async def async_main(args: argparse.Namespace):
     if not FRONTEND_DIR.is_dir():
         raise RuntimeError(f"Missing frontend directory: {FRONTEND_DIR}")
 
+    ensure_ports_available(
+        http_port=args.http_port,
+        ws_port=args.ws_port,
+        ws_host=WS_HOST,
+        runtime_name="Live tracker",
+    )
     start_frontend_http_server(args.http_port, FRONTEND_DIR, ROOT_DIR / "protocol")
 
     print("=" * 55)
     print("  Old Mick Live Tracker")
     print(f"  ws://{WS_HOST}:{args.ws_port}")
-    print(f"  http://localhost:{args.http_port}")
+    print(f"  http://localhost:{args.http_port}?ws_port={args.ws_port}")
     print("=" * 55)
     print()
     print("  Board corner markers (ArUco DICT_4X4_50):")

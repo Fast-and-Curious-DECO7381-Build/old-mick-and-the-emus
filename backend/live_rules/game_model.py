@@ -10,6 +10,7 @@ import random
 from dataclasses import dataclass, field
 
 GRID_COLS, GRID_ROWS = 12, 12
+TIER_THRESHOLDS = (4, 8, 12, 16)
 ATK_TIER_THRESHOLDS = (4, 8)
 DEF_ZONE_RADIUS_T1 = 1
 DEF_ZONE_RADIUS_T2 = 2
@@ -40,6 +41,8 @@ class GameModel:
     hq_p1: tuple
     hq_p2: tuple
     rng: random.Random = field(default_factory=random.Random)
+    tier_p1: int = 0
+    tier_p2: int = 0
     damage: dict = field(default_factory=dict)
     destroyed: set = field(default_factory=set)
     hard_damage: dict = field(default_factory=dict)
@@ -56,6 +59,8 @@ class GameModel:
     hq_reveal: dict = field(default_factory=dict)
     nuke_used_p1: bool = False
     nuke_used_p2: bool = False
+    def_anchor_cells: dict = field(default_factory=lambda: {"p1": None, "p2": None})
+    def_consumed_cells: dict = field(default_factory=lambda: {"p1": set(), "p2": set()})
 
     def _def_zone(self, player: str, def_pos):
         if def_pos is None or def_pos[0] is None:
@@ -83,10 +88,34 @@ class GameModel:
         resource = self._resource_by_cell(side, cell)
         return int(resource.get("max_hp", 1)) if resource is not None else 1
 
-    def _cell_required_hp(self, cell, defender, def_pos):
+    def _cell_required_hp(self, cell, defender, *, def_protection_active: bool = False):
         base_hp = self._resource_base_hp(defender, cell)
-        zone_bonus = 1 if cell in self._def_zone(defender, def_pos) else 0
-        return base_hp + zone_bonus
+        return base_hp + (1 if def_protection_active else 0)
+
+    def _normalize_def_anchor(self, def_pos) -> tuple[int, int] | None:
+        if def_pos is None:
+            return None
+        col, row = def_pos
+        if not isinstance(col, int) or not isinstance(row, int):
+            return None
+        return (col, row)
+
+    def _consume_def_protection(self, side: str, cell: tuple[int, int], def_pos) -> bool:
+        anchor = self._normalize_def_anchor(def_pos)
+        current_anchor = self.def_anchor_cells.get(side)
+        if anchor != current_anchor:
+            self.def_anchor_cells[side] = anchor
+            self.def_consumed_cells[side] = set()
+
+        if anchor is None or cell not in self._def_zone(side, anchor):
+            return False
+
+        consumed = self.def_consumed_cells.setdefault(side, set())
+        if cell in consumed:
+            return False
+
+        consumed.add(cell)
+        return True
 
     def _cell_is_hard(self, cell):
         for group in ("p1_hard", "p2_hard"):
@@ -135,6 +164,29 @@ class GameModel:
 
     def _attrition_threshold(self, side: str) -> int:
         return self._resource_cell_total(side)
+
+    def _progress_points(self, player: str) -> int:
+        enemy_side = "p2" if player == "p1" else "p1"
+        return self._destroyed_resource_cells(enemy_side)
+
+    def _tier_from_progress(self, progress: int) -> int:
+        tier = 0
+        for index, threshold in enumerate(TIER_THRESHOLDS, start=1):
+            if progress >= threshold:
+                tier = index
+        return tier
+
+    def _sync_tiers_from_progress(self) -> None:
+        self.tier_p1 = max(self.tier_p1, self._tier_from_progress(self._progress_points("p1")))
+        self.tier_p2 = max(self.tier_p2, self._tier_from_progress(self._progress_points("p2")))
+
+    def _attacker_splash_count(self, attacker: str) -> int:
+        tier = self.tier_p1 if attacker == "p1" else self.tier_p2
+        if tier >= 3:
+            return 2
+        if tier >= 1:
+            return 1
+        return 0
 
     def _atk_destroyed_count(self, attacker: str, role: str) -> int:
         return int(self.atk_destroyed_counts.get(attacker, {}).get(role, 0))
@@ -187,7 +239,8 @@ class GameModel:
         return candidates
 
     def _apply_hit(self, attacker: str, attacker_role: str | None, enemy_side: str, cell: tuple[int, int], defender_def_pos, *, splash: bool = False) -> list[dict]:
-        req = self._cell_required_hp(cell, enemy_side, defender_def_pos)
+        def_protection_active = self._consume_def_protection(enemy_side, cell, defender_def_pos)
+        req = self._cell_required_hp(cell, enemy_side, def_protection_active=def_protection_active)
         self.damage[cell] = self.damage.get(cell, 0) + 1
         resource_value = self._resource_value(enemy_side, cell)
         if self.damage[cell] >= req:
@@ -208,6 +261,7 @@ class GameModel:
                 self.win_reason = ("homestead" if enemy_side == "p1" else "nest") + "_destroyed"
                 events.append({"type": "hq_destroyed", "side": enemy_side})
             else:
+                self._sync_tiers_from_progress()
                 if self._destroyed_resource_cells(enemy_side) >= self._attrition_threshold(enemy_side):
                     self.winner = attacker
                     self.win_reason = "attrition"
@@ -280,7 +334,7 @@ class GameModel:
                     resource_candidates.append(cell)
 
         for cell in self.rng.sample(resource_candidates, k=min(NUKE_RESOURCE_HITS, len(resource_candidates))):
-            self.damage[cell] = max(self.damage.get(cell, 0), self._cell_required_hp(cell, enemy_side, (None, None)))
+            self.damage[cell] = max(self.damage.get(cell, 0), self._cell_required_hp(cell, enemy_side, def_protection_active=False))
             self.destroyed.add(cell)
             events.append({
                 "type": "cell_destroyed",
@@ -290,6 +344,7 @@ class GameModel:
                 "nuke": True,
             })
 
+        self._sync_tiers_from_progress()
         if self._destroyed_resource_cells(enemy_side) >= self._attrition_threshold(enemy_side):
             self.winner = attacker
             self.win_reason = "attrition"
@@ -413,6 +468,8 @@ class GameModel:
         return events
 
     def snapshot(self):
+        progress_p1 = self._progress_points("p1")
+        progress_p2 = self._progress_points("p2")
         atk_tiers = {
             side: {role: self._atk_tier(side, role) for role in ("atk_a", "atk_b")}
             for side in ("p1", "p2")
@@ -420,9 +477,19 @@ class GameModel:
         return {
             "destroyed": [list(c) for c in self.destroyed],
             "damage": {f"{c},{r}": v for (c, r), v in self.damage.items()},
+            "def_anchor_cells": {
+                side: list(anchor) if anchor is not None else None
+                for side, anchor in self.def_anchor_cells.items()
+            },
+            "def_consumed_cells": {
+                side: [list(cell) for cell in sorted(cells)]
+                for side, cells in self.def_consumed_cells.items()
+            },
             "hard_damage": {f"{c},{r}": v for (c, r), v in self.hard_damage.items()},
+            "hard_terrain_hp": HARD_TERRAIN_HP,
             "hard_gone": [list(c) for c in self.hard_gone],
             "soft_damage": {f"{c},{r}": v for (c, r), v in self.soft_damage.items()},
+            "soft_terrain_hp": SOFT_TERRAIN_HP,
             "soft_gone": [list(c) for c in self.soft_gone],
             "score_p1_destroyed": self._enemy_destroyed_count("p1"),
             "score_p2_destroyed": self._enemy_destroyed_count("p2"),
@@ -441,8 +508,13 @@ class GameModel:
             },
             "atk_tiers": atk_tiers,
             "atk_tier_thresholds": list(ATK_TIER_THRESHOLDS),
+            "progress_p1": progress_p1,
+            "progress_p2": progress_p2,
             "attrition_threshold": self._attrition_threshold("p1"),
             "resource_cell_total": self._resource_cell_total("p1"),
+            "tier_thresholds": list(TIER_THRESHOLDS),
+            "tier_p1": self.tier_p1,
+            "tier_p2": self.tier_p2,
             "nuke_used_p1": self.nuke_used_p1,
             "nuke_used_p2": self.nuke_used_p2,
             "nuke_available_p1": self._nuke_available("p1"),

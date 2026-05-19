@@ -105,8 +105,11 @@ Example:
 - `setup.hq.*`: exposes candidate and confirmed flags only, never hidden HQ coordinates.
 - `battle.active_side`: the side currently allowed to position and submit tokens. `null` means the runtime is waiting for the next `ID10` or `ID20`.
 - `battle.waiting_for_side`: if present, indicates which side's turn marker must be scanned next.
+- `battle.pending_nuke`: `null` or `{ "side", "col", "row", "marker_id" }` while the active side has a valid nuke marker target waiting for `ID4` confirmation.
 - `help_visible`: `true` only while `ID5` is currently visible; the frontend uses it to show the help overlay.
 - `game.hq_revealed`: the only public path for exposing an HQ coordinate after it has been destroyed.
+- `game.def_anchor_cells`: current DEF anchor cell per side, used to detect whether consumed DEF cells still belong to the current DEF position.
+- `game.def_consumed_cells`: per-side cells whose current DEF protection layer has already been consumed. These cells remain alive unless also present in `game.destroyed`.
 
 ## Current frontend usage
 
@@ -121,6 +124,8 @@ Example:
 - `ID5` drives a marker-presence help overlay without changing authoritative game state.
 - The frontend may highlight the active setup side's current HQ candidate cell, but the side panel does not show exact coordinates and confirmed HQs are hidden immediately after confirmation.
 - During `game`, the battle flow is primarily described by `battle.*`: `ID10` and `ID20` open positioning for one side, and `ID4` submits and resolves that side's attack.
+- During `game`, `ID19` and `ID29` set a pending nuke target for the active side when available; the frontend renders the nuke icon and `3x3` target preview from `battle.pending_nuke`.
+- During `game`, the frontend renders DEF zones from token positions and DEF tier, skips cells listed in `game.def_consumed_cells`, and marks consumed cells as broken protection rather than destroyed resources.
 - `errors[]` are rendered through the bottom warning bar and related board-side UI cues.
 - `inactive_side_token_changed` is treated as a recoverable warning that explains the opponent movement was ignored.
 - `hq_setup_complete` is rendered as a success-style alert instead of a warning.

@@ -110,6 +110,7 @@ export class GameScene extends Phaser.Scene {
     this._nukeArmingSide  = null;
     this._prevWinner      = null;
     this._terrainSprites  = [];
+    this._terrainHpLabels = [];
     this._rayGfxPool      = [];   // recycled Graphics objects for ray animations
     this._pickerData      = null; // {container, col, row, side} when picker is open
     this._lastActiveSide  = null; // track turn changes
@@ -192,9 +193,11 @@ export class GameScene extends Phaser.Scene {
       p1_atk_a: "tok_mick_atk_a",
       p1_atk_b: "tok_mick_atk_b",
       p1_def:   "tok_mick_def",
+      p1_nuke:  "tok_mick_nuke",
       p2_atk_a: "tok_emu_atk_a",
       p2_atk_b: "tok_emu_atk_b",
       p2_def:   "tok_emu_def",
+      p2_nuke:  "tok_emu_nuke",
     };
 
     this.tokenSprites    = {};
@@ -663,7 +666,7 @@ export class GameScene extends Phaser.Scene {
     const battle   = s.battle || {};
     const inBattle = s.phase === "game" || s.phase == null;
 
-    const terrainKey = `${s.map_seed}|${JSON.stringify(G.hard_gone || [])}|${JSON.stringify(G.soft_gone || [])}`;
+    const terrainKey = `${s.map_seed}|${JSON.stringify(G.hard_damage || {})}|${JSON.stringify(G.soft_damage || {})}|${JSON.stringify(G.hard_gone || [])}|${JSON.stringify(G.soft_gone || [])}`;
     if (s.terrain && terrainKey !== this._lastSeed) {
       this._renderResources(s);
       this._lastSeed = terrainKey;
@@ -676,9 +679,12 @@ export class GameScene extends Phaser.Scene {
 
     if (inBattle) {
       if (s.p1?.def?.col != null)
-        this._drawDefZone(s.p1.def.col, s.p1.def.row, G.def_tier_p1 ?? 0, 0xe8d060);
+        this._drawDefZone("p1", s.p1.def.col, s.p1.def.row, G.def_tier_p1 ?? 0, 0xe8d060, G);
       if (s.p2?.def?.col != null)
-        this._drawDefZone(s.p2.def.col, s.p2.def.row, G.def_tier_p2 ?? 0, 0x60e8a0);
+        this._drawDefZone("p2", s.p2.def.col, s.p2.def.row, G.def_tier_p2 ?? 0, 0x60e8a0, G);
+      this._drawConsumedDefCells("p1", G, 0xe8d060);
+      this._drawConsumedDefCells("p2", G, 0x60e8a0);
+      this._drawNukePreview(battle.pending_nuke);
 
       for (const role of ["atk_a", "atk_b"]) {
         if (s.p1?.[role]?.col != null && s.p1[role].direction)
@@ -690,6 +696,8 @@ export class GameScene extends Phaser.Scene {
             computeRay(s.p2[role].col, s.p2[role].row, s.p2[role].direction,
                        hardMap, softMap, "p2", destroyedMap, p1TargetMap));
       }
+    } else {
+      this._drawNukePreview(null);
     }
 
     this._drawHqPlacementRings(s);
@@ -705,11 +713,15 @@ export class GameScene extends Phaser.Scene {
   _renderResources(state) {
     for (const sp of this._terrainSprites) sp.destroy();
     this._terrainSprites = [];
+    for (const label of this._terrainHpLabels) label.destroy();
+    this._terrainHpLabels = [];
     this.resourceGfx.clear();
     const terrain = state?.terrain;
     if (!terrain) return;
     const hardGoneKeys = new Set((state.game?.hard_gone || []).map(([c, r]) => `${c},${r}`));
     const softGoneKeys = new Set((state.game?.soft_gone || []).map(([c, r]) => `${c},${r}`));
+    const hardHp = state.game?.hard_terrain_hp ?? 5;
+    const softHp = state.game?.soft_terrain_hp ?? 2;
 
     const cw = GRID_DRAW_W / GRID_SIZE;
     const ch = GRID_DRAW_H / GRID_SIZE;
@@ -721,12 +733,30 @@ export class GameScene extends Phaser.Scene {
       this._terrainSprites.push(sp);
     };
 
+    const placeTerrain = (col, row, tex, maxHp, damageMap, goneKeys, color) => {
+      const key = `${col},${row}`;
+      if (goneKeys.has(key)) return;
+      place(col, row, tex);
+      const damage = damageMap?.[key] ?? 0;
+      const remaining = Math.max(1, maxHp - damage);
+      const { x, y } = cellXY(col, row);
+      const label = this.add.text(x, y + ch * 0.34, String(remaining), {
+        fontFamily: FONT_MONO,
+        fontSize: "11px",
+        fontStyle: "bold",
+        color,
+        stroke: "#000000",
+        strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(12);
+      this._terrainHpLabels.push(label);
+    };
+
     for (const r of terrain.p1_resources || []) place(r.col, r.row, "cell_mick");
     for (const r of terrain.p2_resources || []) place(r.col, r.row, "cell_emu");
-    for (const t of terrain.p1_hard      || []) if (!hardGoneKeys.has(`${t.col},${t.row}`)) place(t.col, t.row, "hard_mick");
-    for (const t of terrain.p2_hard      || []) if (!hardGoneKeys.has(`${t.col},${t.row}`)) place(t.col, t.row, "hard_emu");
-    for (const t of terrain.p1_soft      || []) if (!softGoneKeys.has(`${t.col},${t.row}`)) place(t.col, t.row, "soft_mick");
-    for (const t of terrain.p2_soft      || []) if (!softGoneKeys.has(`${t.col},${t.row}`)) place(t.col, t.row, "soft_emu");
+    for (const t of terrain.p1_hard || []) placeTerrain(t.col, t.row, "hard_mick", hardHp, state.game?.hard_damage, hardGoneKeys, "#ffd060");
+    for (const t of terrain.p2_hard || []) placeTerrain(t.col, t.row, "hard_emu", hardHp, state.game?.hard_damage, hardGoneKeys, "#ffd060");
+    for (const t of terrain.p1_soft || []) placeTerrain(t.col, t.row, "soft_mick", softHp, state.game?.soft_damage, softGoneKeys, "#ffe0a0");
+    for (const t of terrain.p2_soft || []) placeTerrain(t.col, t.row, "soft_emu", softHp, state.game?.soft_damage, softGoneKeys, "#ffe0a0");
 
     const g = this.resourceGfx;
     for (const r of [...(terrain.p1_resources || []), ...(terrain.p2_resources || [])]) {
@@ -785,14 +815,61 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Defence zone ───────────────────────────────────────────────────────────
 
-  _drawDefZone(col, row, tier, color) {
-    const rad  = tier >= 1 ? 2 : 1;
-    const cw   = GRID_DRAW_W / GRID_SIZE, ch = GRID_DRAW_H / GRID_SIZE;
-    const size = rad * 2 + 1;
-    const x    = BOARD_OFF_X + GRID_INSET_X + (col - rad) * cw;
-    const y    = BOARD_OFF_Y + GRID_INSET_Y + (row - rad) * ch;
-    this.dynGfx.fillStyle(color, 0.09);  this.dynGfx.fillRect(x, y, size * cw, size * ch);
-    this.dynGfx.lineStyle(2, color, 0.55); this.dynGfx.strokeRect(x, y, size * cw, size * ch);
+  _drawDefZone(side, col, row, tier, color, G) {
+    const rad = tier >= 1 ? 2 : 1;
+    const cw = GRID_DRAW_W / GRID_SIZE, ch = GRID_DRAW_H / GRID_SIZE;
+    const consumed = new Set();
+    const anchor = G?.def_anchor_cells?.[side];
+    if (Array.isArray(anchor) && anchor[0] === col && anchor[1] === row) {
+      for (const [c, r] of G?.def_consumed_cells?.[side] || []) consumed.add(`${c},${r}`);
+    }
+
+    this.dynGfx.lineStyle(1.5, color, 0.42);
+    for (let y = row - rad; y <= row + rad; y++) {
+      for (let x = col - rad; x <= col + rad; x++) {
+        if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) continue;
+        if (consumed.has(`${x},${y}`)) continue;
+        const bx = BOARD_OFF_X + GRID_INSET_X + x * cw;
+        const by = BOARD_OFF_Y + GRID_INSET_Y + y * ch;
+        this.dynGfx.fillStyle(color, 0.09);
+        this.dynGfx.fillRect(bx, by, cw, ch);
+        this.dynGfx.strokeRect(bx, by, cw, ch);
+      }
+    }
+
+  }
+
+  _drawConsumedDefCells(side, G, color) {
+    const anchor = G?.def_anchor_cells?.[side];
+    const token = this.gameState?.[side]?.def;
+    if (!Array.isArray(anchor) || token?.col !== anchor[0] || token?.row !== anchor[1]) return;
+
+    const cw = GRID_DRAW_W / GRID_SIZE, ch = GRID_DRAW_H / GRID_SIZE;
+    const destroyed = new Set((G?.destroyed || []).map(([col, row]) => `${col},${row}`));
+    for (const [col, row] of G?.def_consumed_cells?.[side] || []) {
+      if (destroyed.has(`${col},${row}`)) continue;
+      const bx = BOARD_OFF_X + GRID_INSET_X + col * cw;
+      const by = BOARD_OFF_Y + GRID_INSET_Y + row * ch;
+      const pad = 5;
+      const cut = 13;
+      this.dynGfx.fillStyle(0x000000, 0.28);
+      this.dynGfx.fillRect(bx + pad, by + pad, cw - pad * 2, ch - pad * 2);
+      this.dynGfx.lineStyle(3, 0x000000, 0.75);
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + pad, by + pad + cut, bx + pad + cut, by + pad));
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + cw - pad - cut, by + pad, bx + cw - pad, by + pad + cut));
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + pad, by + ch - pad - cut, bx + pad + cut, by + ch - pad));
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + cw - pad - cut, by + ch - pad, bx + cw - pad, by + ch - pad - cut));
+      this.dynGfx.lineStyle(2, color, 1.0);
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + pad, by + pad + cut, bx + pad + cut, by + pad));
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + cw - pad - cut, by + pad, bx + cw - pad, by + pad + cut));
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + pad, by + ch - pad - cut, bx + pad + cut, by + ch - pad));
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + cw - pad - cut, by + ch - pad, bx + cw - pad, by + ch - pad - cut));
+      this.dynGfx.lineStyle(2.5, 0xff3020, 0.95);
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + cw * 0.39, by + ch * 0.36, bx + cw * 0.50, by + ch * 0.50));
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + cw * 0.50, by + ch * 0.50, bx + cw * 0.43, by + ch * 0.65));
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + cw * 0.54, by + ch * 0.38, bx + cw * 0.61, by + ch * 0.50));
+      this.dynGfx.strokeLineShape(new Phaser.Geom.Line(bx + cw * 0.61, by + ch * 0.50, bx + cw * 0.56, by + ch * 0.64));
+    }
   }
 
   // ─── Attack ray ─────────────────────────────────────────────────────────────
@@ -853,12 +930,50 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  _drawNukePreview(pendingNuke) {
+    const sprites = {
+      p1: this.tokenSprites?.p1_nuke,
+      p2: this.tokenSprites?.p2_nuke,
+    };
+
+    for (const sprite of Object.values(sprites)) sprite?.setVisible(false);
+
+    if (!pendingNuke || pendingNuke.col == null || pendingNuke.row == null) return;
+    const { side, col, row } = pendingNuke;
+    const sprite = sprites[side];
+    if (!sprite) return;
+
+    const cw = GRID_DRAW_W / GRID_SIZE, ch = GRID_DRAW_H / GRID_SIZE;
+    const pulse = 0.65 + 0.20 * Math.sin(this.time.now / 140);
+    const color = side === "p1" ? 0xffb020 : 0xff6040;
+
+    for (let y = row - 1; y <= row + 1; y++) {
+      for (let x = col - 1; x <= col + 1; x++) {
+        if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) continue;
+        const bx = BOARD_OFF_X + GRID_INSET_X + x * cw;
+        const by = BOARD_OFF_Y + GRID_INSET_Y + y * ch;
+        this.dynGfx.fillStyle(color, 0.16);
+        this.dynGfx.fillRect(bx + 1, by + 1, cw - 2, ch - 2);
+        this.dynGfx.lineStyle(2, color, pulse);
+        this.dynGfx.strokeRect(bx + 2, by + 2, cw - 4, ch - 4);
+      }
+    }
+
+    const { x, y } = cellXY(col, row);
+    this.dynGfx.lineStyle(4, 0x000000, 0.65);
+    this.dynGfx.strokeCircle(x, y, cw * 0.52);
+    this.dynGfx.lineStyle(2.5, color, 0.95);
+    this.dynGfx.strokeCircle(x, y, cw * 0.52);
+    sprite.setPosition(x, y).setAngle(Math.sin(this.time.now / 180) * 3).setAlpha(1).setVisible(true);
+  }
+
   // ─── HQ placement rings ─────────────────────────────────────────────────────
 
   _drawHqPlacementRings(s) {
+    if (s.phase !== "hq_placement") return;
     const cw = GRID_DRAW_W / GRID_SIZE, ch = GRID_DRAW_H / GRID_SIZE;
     for (const side of ["p1", "p2"]) {
-      if (s.phase === "hq_placement" && s.setup?.active_setup_side !== side) continue;
+      if (s.setup?.active_setup_side !== side || s.setup?.hq?.[side]?.confirmed) continue;
       const marker = s.hq_markers?.[side];
       if (!marker || marker.col == null || marker.stale) continue;
       const { col, row } = marker;
@@ -990,7 +1105,8 @@ export class GameScene extends Phaser.Scene {
       (G.win_reason === "homestead_destroyed" || G.win_reason === "nest_destroyed");
 
     for (const side of ["p1", "p2"]) {
-      if (s.phase === "hq_placement" && s.setup?.active_setup_side !== side) continue;
+      if (s.phase !== "hq_placement") continue;
+      if (s.setup?.active_setup_side !== side || s.setup?.hq?.[side]?.confirmed) continue;
       const m = s.hq_markers?.[side];
       if (m?.col != null && !m.stale) {
         showAt(side, m.col, m.row);

@@ -20,6 +20,7 @@ for import_root in (ROOT_DIR, BACKEND_DIR):
 
 from bridge.transport.websocket_transport import WS_HOST, WS_PORT, broadcast, drain_actions, run_server
 from runner.frontend_static_server import start_frontend_http_server
+from runner.port_check import ensure_ports_available
 from runner.run_manual_play import (
     HTTP_PORT,
     FRONTEND_DIR,
@@ -141,6 +142,12 @@ async def publish_browser_manual(send_fps: int = SEND_FPS) -> None:
 async def async_main() -> None:
     if not FRONTEND_DIR.is_dir():
         raise RuntimeError(f"Missing frontend directory: {FRONTEND_DIR}")
+    ensure_ports_available(
+        http_port=HTTP_PORT,
+        ws_port=WS_PORT,
+        ws_host=WS_HOST,
+        runtime_name="Browser manual play",
+    )
     start_frontend_http_server(HTTP_PORT, FRONTEND_DIR, ROOT_DIR / "protocol")
     print("=" * 55)
     print("  Defend Your Pixels Browser Manual Play")

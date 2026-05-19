@@ -35,10 +35,11 @@ from runner.setup_flow import (
 )
 from live_rules import game_model, terrain_gen
 from runner.frontend_static_server import start_frontend_http_server
+from runner.port_check import DEFAULT_HTTP_PORT, ensure_ports_available
 
 
 SEND_FPS = 10
-HTTP_PORT = 8080
+HTTP_PORT = DEFAULT_HTTP_PORT
 FRONTEND_DIR = ROOT_DIR / "frontend"
 PHASE_MODE_SELECT = "mode_select"
 MODE_NORMAL = "normal"
@@ -131,6 +132,8 @@ def _print_help() -> None:
     print("  turn 2")
     print("  flip")
     print("  new_map")
+    print("  tier 1 +1")
+    print("  tier 2 -1")
     print("  quit")
 
 
@@ -216,6 +219,18 @@ def _parse_terminal_command(line: str) -> dict | None:
         if turn not in (1, 2):
             raise ValueError("turn must be 1 or 2")
         return {"type": "turn", "turn": turn}
+
+    if name == "tier":
+        if len(parts) != 3:
+            raise ValueError("usage: tier 1 +1")
+        try:
+            player = int(parts[1])
+            delta = int(parts[2])
+        except ValueError as exc:
+            raise ValueError("tier expects an integer player and integer delta") from exc
+        if player not in (1, 2):
+            raise ValueError("tier player must be 1 or 2")
+        return {"type": "tier", "player": player, "delta": delta}
 
     if name == "nuke":
         if len(parts) != 3:
@@ -358,6 +373,27 @@ class Session:
                 print(f"[{source}] Invalid mode selection")
             else:
                 print(f"[{source}] Mode already locked: {self.selected_mode}")
+            return events, errors
+
+        if command_type == "tier":
+            if self.model is None:
+                print(f"[{source}] Ignored tier change until the game starts")
+                return events, errors
+            try:
+                player = int(command.get("player"))
+                delta = int(command.get("delta"))
+            except (TypeError, ValueError):
+                print(f"[{source}] Ignored invalid tier command")
+                return events, errors
+
+            if player == 1:
+                self.model.tier_p1 = max(0, min(4, self.model.tier_p1 + delta))
+                print(f"[{source}] P1 tier -> {self.model.tier_p1}")
+            elif player == 2:
+                self.model.tier_p2 = max(0, min(4, self.model.tier_p2 + delta))
+                print(f"[{source}] P2 tier -> {self.model.tier_p2}")
+            else:
+                print(f"[{source}] Ignored invalid tier player")
             return events, errors
 
         if action_name == "choose_side":
@@ -670,6 +706,12 @@ async def async_main() -> None:
     if not FRONTEND_DIR.is_dir():
         raise RuntimeError(f"Missing frontend directory: {FRONTEND_DIR}")
 
+    ensure_ports_available(
+        http_port=HTTP_PORT,
+        ws_port=WS_PORT,
+        ws_host=WS_HOST,
+        runtime_name="Manual play",
+    )
     start_frontend_http_server(HTTP_PORT, FRONTEND_DIR, ROOT_DIR / "protocol")
 
     print("=" * 55)
@@ -678,7 +720,7 @@ async def async_main() -> None:
     print(f"  http://localhost:{HTTP_PORT}")
     print("=" * 55)
     print()
-    print("  Browser: open http://localhost:8080")
+    print(f"  Browser: open http://localhost:{HTTP_PORT}")
     print("  Input: terminal commands and browser setup actions")
     print()
 
