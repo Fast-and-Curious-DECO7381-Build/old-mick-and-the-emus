@@ -21,9 +21,10 @@ for import_root in (ROOT_DIR, BACKEND_DIR):
 from bridge.transport.websocket_transport import WS_HOST, WS_PORT, broadcast, drain_actions, run_server
 from live_rules import game_model, terrain_gen
 from runner.frontend_static_server import start_frontend_http_server
+from runner.port_check import DEFAULT_HTTP_PORT, ensure_ports_available
 
 
-HTTP_PORT = 8080
+HTTP_PORT = DEFAULT_HTTP_PORT
 FRONTEND_DIR = ROOT_DIR / "frontend"
 SEND_FPS = 10
 
@@ -137,6 +138,12 @@ async def publish_demo(send_fps: int = SEND_FPS) -> None:
 
 
 async def async_main() -> None:
+    ensure_ports_available(
+        http_port=HTTP_PORT,
+        ws_port=WS_PORT,
+        ws_host=WS_HOST,
+        runtime_name="Demo mode",
+    )
     start_frontend_http_server(HTTP_PORT, FRONTEND_DIR, ROOT_DIR / "protocol")
     print("=" * 55)
     print("  Defend Your Pixels Demo Mode")

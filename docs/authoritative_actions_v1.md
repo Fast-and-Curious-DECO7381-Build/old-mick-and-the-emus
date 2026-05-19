@@ -4,11 +4,11 @@ This document defines the action messages sent from the browser frontend, tracke
 
 ## Current status
 
-- The live Old Mick path is primarily marker-driven during setup and battle.
-- Setup actions include `choose_side`, `set_hq_candidate`, `confirm_hq`, and optional setup reset aliases `reset_setup` / `cancel_hq`.
-- Battle attacks are resolved by the live runtime from physical ATK marker positions and `ID4` confirm scans.
-- Nuke can be triggered through the live runtime by marker (`ID19` for P1, `ID29` for P2) or by the debug `trigger_nuke` action.
-- `upgrade_unit` is not used; ATK, DEF, and NUKE progression is computed automatically from live game state.
+- The currently implemented authoritative gameplay actions are `end_turn`, `move_unit`, `attack_in_direction`, and `trigger_nuke`.
+- The live Old Mick setup flow also accepts `choose_side`, `set_hq_candidate`, `confirm_hq`, and the optional setup reset aliases `reset_setup` and `cancel_hq`.
+- The live path is primarily marker-driven during setup and battle.
+- `upgrade_unit` is out of scope for the current integration prototype.
+- `move_unit` intents may currently come from either the tracker flow or the browser frontend.
 
 ## WebSocket message
 
@@ -165,6 +165,27 @@ Python behavior:
 - Stops if terrain blocks the line first. Soft terrain is destroyed after 2 hits; hard terrain is destroyed after 5 hits.
 - Updates HQ or resource-tile state and `last_action` on success.
 
+### `trigger_nuke`
+
+Purpose: submit a one-use nuke target for the active side.
+
+```json
+{
+  "action": "trigger_nuke",
+  "side": "p1",
+  "position": { "x": 8, "y": 6 }
+}
+```
+
+Python behavior:
+
+- Accepted only during `game`, only for the current `battle.active_side`, and only if that side's nuke is available.
+- The target must be in enemy territory.
+- Browser/manual commands set the pending nuke target for the active side.
+- In the live marker path, `ID19` for `p1` and `ID29` for `p2` set the same pending target from camera marker position.
+- The pending target is exposed to the frontend as `battle.pending_nuke` so the browser can render the nuke icon and `3x3` target preview.
+- The nuke resolves when `ID4` confirms the active side's turn. It affects the `3x3` area centered on the pending target, destroys terrain in that area, randomly destroys up to 5 resource cells, bypasses DEF protection, and does not destroy HQs.
+
 ## Actions excluded from v1
 
 ### `upgrade_unit`
@@ -196,7 +217,9 @@ The current live battle path does not primarily use browser-sent `end_turn` acti
 
 - `ID10` and `ID20` open positioning for `p1` or `p2`.
 - The active side's token-marker positions and rotations become that turn's candidate state.
+- `ID19` and `ID29` optionally set a pending nuke target for the active side when the nuke is unlocked and the marker is in enemy territory.
 - `ID4` submits the active side and triggers authoritative attack resolution immediately.
+- If a pending nuke target exists, `ID4` also resolves the nuke after the active side's normal attacks.
 - After resolution, the runtime waits for the opposing side's `ID10` or `ID20`.
 
 In other words, the live marker path is currently marker-driven rather than explicit action-driven for turn submission.
