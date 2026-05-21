@@ -35,10 +35,11 @@ from runner.setup_flow import (
 )
 from live_rules import game_model, terrain_gen, tutorial
 from runner.frontend_static_server import start_frontend_http_server
+from runner.port_check import DEFAULT_HTTP_PORT
 
 
 SEND_FPS = 10
-HTTP_PORT = 8080
+HTTP_PORT = DEFAULT_HTTP_PORT
 FRONTEND_DIR = ROOT_DIR / "frontend"
 PHASE_MODE_SELECT = "mode_select"
 MODE_NORMAL = "normal"
@@ -849,7 +850,7 @@ async def async_main() -> None:
     print(f"  http://localhost:{HTTP_PORT}")
     print("=" * 55)
     print()
-    print("  Browser: open http://localhost:8080")
+    print(f"  Browser: open http://localhost:{HTTP_PORT}")
     print("  HQ setup: terminal commands only")
     print("  Battle: terminal commands or browser token placement/end turn")
     print()

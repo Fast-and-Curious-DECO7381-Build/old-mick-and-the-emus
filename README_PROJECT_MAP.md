@@ -1,10 +1,10 @@
-# Defend Your Pixels - Project Map
+# Old Micks and The Emus - Project Map
 
 This document explains the current repository in simple terms for new team members.
 
 ## What this project is
 
-Defend Your Pixels is a hybrid vision-based AR board game.  
+Old Micks and The Emus is a hybrid vision-based AR board game.  
 The system uses a camera to detect board markers and tokens, converts those detections into game positions, updates game logic, and sends the latest game state to a frontend.
 
 ## High-level data flow

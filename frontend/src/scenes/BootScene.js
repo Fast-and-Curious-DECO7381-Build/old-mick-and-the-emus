@@ -2,7 +2,7 @@ import { COLORS } from "../constants.js";
 import { preloadAll } from "../audio.js";
 
 /**
- * BootScene — preloads all assets, then starts GameScene.
+ * BootScene — preloads all assets, then starts IntroScene.
  * WebSocket is managed externally (main.js → registry).
  */
 export class BootScene extends Phaser.Scene {
@@ -12,6 +12,8 @@ export class BootScene extends Phaser.Scene {
     preloadAll(this);
 
     this.load.image("board",          "assets/images/board.png");
+    // Optional intro title — missing file is OK (IntroScene uses text fallback)
+    this.load.image("intro_title",    "assets/images/intro_title.png");
 
     this.load.image("tok_mick_atk_a", "assets/images/atk-mick-a.png");
     this.load.image("tok_mick_atk_b", "assets/images/atk-mick-b.png");
@@ -68,6 +70,7 @@ export class BootScene extends Phaser.Scene {
     ];
     for (const key of WHITE_BG_KEYS) this._removeWhiteBg(key);
 
-    this.scene.start("Game");
+    const ws = this.game.registry.get("ws");
+    this.scene.start("Intro", { ws });
   }
 }

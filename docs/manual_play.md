@@ -15,6 +15,7 @@ Manual mode:
 ## Files
 
 - `runner/run_manual_play.py`
+- `runner/run_browser_manual_play.py`
 - `docs/manual_play.md`
 
 ## How To Launch
@@ -30,6 +31,26 @@ This will:
 
 Open `http://localhost:8080` separately in your browser.
 
+## Browser Manual Play
+
+For click-to-place testing on the board (no terminal commands for setup), use:
+
+```powershell
+.venv\Scripts\python -m runner.run_browser_manual_play
+```
+
+Then open `http://localhost:8080`.
+
+This runner:
+- serves the same mainline frontend and WebSocket port as terminal manual play
+- auto-locks `normal` mode and `old_mick` as the first setup side
+- auto-places and confirms both HQs, then enters `game` with `manual_controls` enabled
+- skips the HTML mode overlay and Intro side-selection flow
+
+In the browser: click cells on your active side to place or rotate tokens, then use **END TURN** to resolve attacks and hand off to the other player.
+
+Do not run this at the same time as `run_manual_play`, `run_live_tracker`, or any other process on `ws://localhost:8765`.
+
 ## Terminal Commands
 
 Type commands into the manual runner terminal window.
@@ -40,6 +61,8 @@ Available commands:
 help
 show
 show_setup
+mode normal
+mode tutorial
 choose_side old_mick
 choose_side mob
 set_hq p1 A3
@@ -63,6 +86,7 @@ Rules for commands:
 - board cells use `A1` through `L12`
 - attackers need a direction: `E`, `SE`, `S`, `SW`, `W`, `NW`, `N`, `NE`
 - defenders only need a position
+- run `mode normal` or `mode tutorial` before setup commands (`choose_side`, HQ placement, etc.)
 - choose a setup side before confirming HQs
 - use `set_hq` and `confirm_hq` to finish hidden HQ setup
 - `flip` toggles turn `1 <-> 2`
@@ -90,12 +114,13 @@ quit
 
 Typical flow:
 1. Launch the manual runner.
-2. Choose the first setup side with `choose_side old_mick` or `choose_side mob`.
-3. Set and confirm both HQs with `set_hq` and `confirm_hq`.
-4. Place both sides with `set` commands.
-5. Open or watch `http://localhost:8080`.
-6. Use `flip` or `turn 1` / `turn 2` to advance the battle and trigger attack resolution.
-7. Use `show` or `show_setup` whenever you want a terminal-side summary.
+2. Lock a mode with `mode normal` or `mode tutorial`.
+3. Choose the first setup side with `choose_side old_mick` or `choose_side mob`.
+4. Set and confirm both HQs with `set_hq` and `confirm_hq`.
+5. Place both sides with `set` commands.
+6. Open or watch `http://localhost:8080`.
+7. Use `flip` or `turn 1` / `turn 2` to advance the battle and trigger attack resolution.
+8. Use `show` or `show_setup` whenever you want a terminal-side summary.
 
 ## Notes and Limitations
 

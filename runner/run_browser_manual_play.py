@@ -23,15 +23,30 @@ from runner.frontend_static_server import start_frontend_http_server
 from runner.run_manual_play import (
     HTTP_PORT,
     FRONTEND_DIR,
+    MODE_NORMAL,
     Session as TerminalManualSession,
 )
-from runner.setup_flow import PLAYERS, dedupe_errors
+from runner.setup_flow import PHASE_GAME, PLAYERS, dedupe_errors
 
 
 SEND_FPS = 10
 
 
 class BrowserManualSession(TerminalManualSession):
+    def __init__(self) -> None:
+        super().__init__()
+        self._bootstrap_browser_manual()
+
+    def _bootstrap_browser_manual(self) -> None:
+        if not self.select_mode(MODE_NORMAL):
+            raise RuntimeError("Failed to lock normal mode for browser manual play")
+        if not self.setup.choose_side("old_mick"):
+            raise RuntimeError("Failed to choose first player side for browser manual play")
+        self._auto_start_game()
+        if self.model is None or self.setup.phase != PHASE_GAME:
+            raise RuntimeError("Browser manual bootstrap did not reach game phase")
+        print("[browser] Bootstrap complete: normal mode, old_mick first, HQ auto-placed")
+
     def _auto_start_game(self) -> None:
         active_side = self.setup.active_setup_side
         if active_side not in PLAYERS:
@@ -76,7 +91,7 @@ class BrowserManualSession(TerminalManualSession):
 async def publish_browser_manual(send_fps: int = SEND_FPS) -> None:
     session = BrowserManualSession()
     interval = 1.0 / send_fps
-    print("[Browser Manual] Use browser mode select, pick a side, then click the board to play")
+    print("[Browser Manual] Ready: click the board to place/rotate tokens, then END TURN.")
     while True:
         frame_events: list[dict] = []
         frame_errors: list[dict] = []

@@ -11,7 +11,8 @@ Naming convention
 
 Entry points
 - `run_live_tracker.py`: full live runtime for `camera -> python_tracker -> shared live rules -> websocket -> HTTP -> frontend/index.html`
-- `run_manual_play.py`: no-camera manual runtime for local frontend and rules testing
+- `run_manual_play.py`: no-camera manual runtime for local frontend and rules testing (terminal-led setup)
+- `run_browser_manual_play.py`: no-camera browser-click manual play; auto-skips mode/side/HQ setup and enables `manual_controls` on the board
 
 Notes
 - `run_live_tracker.py` is the supported live entrypoint for the current game flow.

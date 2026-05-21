@@ -53,7 +53,11 @@ function countProtectedResources(side, def, state, defTier) {
 
 function onState(s) {
   if (!s) return;
-  _updateModeOverlay(s);
+  if (document.body.classList.contains("intro-stage")) {
+    _setHelpVisible(!!s.help_visible);
+    _updateStatus(s, s.battle?.active_side ?? null, s.game || {});
+    return;
+  }
   _setHelpVisible(!!s.help_visible);
   const p1         = s.p1      || {};
   const p2         = s.p2      || {};
@@ -141,12 +145,6 @@ function _setHelpVisible(visible) {
     root.style.display = "none";
     _helpUserClosed = false;
   }
-}
-
-function _updateModeOverlay(state) {
-  const overlay = el("mode-overlay");
-  if (!overlay) return;
-  overlay.classList.toggle("hidden", state.mode != null || state.phase !== "mode_select");
 }
 
 // ── Score ──────────────────────────────────────────────────────────────────────
@@ -322,9 +320,6 @@ function onEvents(events) {
 // ─── Public init ──────────────────────────────────────────────────────────────
 
 export function initUI(ws) {
-  el("mode-normal")?.addEventListener("click", () => ws.send("select_mode", { mode: "normal" }));
-  el("mode-tutorial")?.addEventListener("click", () => ws.send("select_mode", { mode: "tutorial" }));
-
   ws.on("connected", () => {
     _wsConnected = true;
     if (!_resultTimerActive) _updateStatus(_lastState, _lastActiveSide, _lastGame);
