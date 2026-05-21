@@ -215,12 +215,14 @@ export class GameScene extends Phaser.Scene {
   _buildTokenSprites() {
     const sz  = CELL * 0.88;
     const TEX = {
-      p1_atk_a: "tok_mick_atk_a",
-      p1_atk_b: "tok_mick_atk_b",
-      p1_def:   "tok_mick_def",
-      p2_atk_a: "tok_emu_atk_a",
-      p2_atk_b: "tok_emu_atk_b",
-      p2_def:   "tok_emu_def",
+      p1_atk_a:   "tok_mick_atk_a",
+      p1_atk_b:   "tok_mick_atk_b",
+      p1_def:     "tok_mick_def",
+      p1_def_2:   "tok_mick_def_2",
+      p2_atk_a:   "tok_emu_atk_a",
+      p2_atk_b:   "tok_emu_atk_b",
+      p2_def:     "tok_emu_def",
+      p2_def_2:   "tok_emu_def_2",
     };
 
     this.tokenSprites    = {};
@@ -1253,7 +1255,19 @@ export class GameScene extends Phaser.Scene {
     const cw = GRID_DRAW_W / GRID_SIZE, ch = GRID_DRAW_H / GRID_SIZE;
 
     const draw = (key, tok) => {
-      const sprite = this.tokenSprites[key];
+      const side = key.startsWith("p1") ? "p1" : "p2";
+      const role = key.replace(`${side}_`, "");
+
+      // Swap defense sprite based on tier
+      let spriteKey = key;
+      if (role === "def") {
+        const defTier = side === "p1" ? (G?.def_tier_p1 ?? 0) : (G?.def_tier_p2 ?? 0);
+        if (defTier >= 1) {
+          spriteKey = `${side}_def_2`;
+        }
+      }
+
+      const sprite = this.tokenSprites[spriteKey];
       const badge  = this.tokenBadges[key];
       const arrow  = this.tokenArrows[key];
       const warn   = this.tokenWarnLabels[key];
@@ -1270,8 +1284,6 @@ export class GameScene extends Phaser.Scene {
       const { x, y } = cellXY(tok.col, tok.row);
       const stale    = !!tok.stale;
       const alpha    = stale ? 0.45 : 1;
-      const side     = key.startsWith("p1") ? "p1" : "p2";
-      const role     = key.replace(`${side}_`, "");
       const tier     = role === "def"
         ? (side === "p1" ? (G?.def_tier_p1 ?? 0) : (G?.def_tier_p2 ?? 0))
         : (G?.atk_tiers?.[side]?.[role] ?? 0);
