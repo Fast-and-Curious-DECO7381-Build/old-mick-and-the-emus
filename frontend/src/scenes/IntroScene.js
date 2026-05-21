@@ -116,7 +116,7 @@ export class IntroScene extends Phaser.Scene {
       img.setScale(Math.min(maxW / img.width, maxH / img.height, 1));
       objs.push(img);
     } else {
-      objs.push(this.add.text(CX, titleY - 16, "THE GREAT EMU WAR", {
+      objs.push(this.add.text(CX, titleY - 16, "Old Mick and the Emus", {
         fontFamily: "'Press Start 2P', monospace",
         fontSize: "13px",
         color: "#d4a030",
