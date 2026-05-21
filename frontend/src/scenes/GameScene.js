@@ -132,6 +132,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.cameras.main.setBackgroundColor("#0f0c08");
     this.boardGfx    = this.add.graphics().setDepth(0);
     this.resourceGfx = this.add.graphics().setDepth(1);
     this.dmgGfx      = this.add.graphics().setDepth(2);

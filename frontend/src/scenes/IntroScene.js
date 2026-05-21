@@ -45,7 +45,6 @@ export class IntroScene extends Phaser.Scene {
   create() {
     this._introPhase = "start";
     this._setIntroStage(true);
-    this.add.rectangle(CX, H / 2, W, H, 0x000000).setDepth(-1);
 
     this._pointerAdvanceHandler = () => {
       this._startAudio();
@@ -105,14 +104,11 @@ export class IntroScene extends Phaser.Scene {
     const objs = [];
     const titleY = H * 0.28;
 
-    const titleFrame = this.add.rectangle(CX, titleY, W * 0.78, H * 0.34, 0x0a0a0a)
-      .setStrokeStyle(1, 0x2a2a2a);
-    objs.push(titleFrame);
 
     if (this.textures.exists(INTRO_TITLE_KEY)) {
       const img = this.add.image(CX, titleY, INTRO_TITLE_KEY);
-      const maxW = W * 0.72;
-      const maxH = H * 0.3;
+      const maxW = W * 0.90;
+      const maxH = H * 0.42;
       img.setScale(Math.min(maxW / img.width, maxH / img.height, 1));
       objs.push(img);
     } else {

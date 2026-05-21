@@ -13,7 +13,7 @@ const game = new Phaser.Game({
   type:            Phaser.AUTO,
   width:           CANVAS_W,
   height:          CANVAS_H,
-  backgroundColor: "#0f0c08",
+  transparent:      true,
   parent:          "game-canvas",
   // Required for tutorial GIF <img> overlays (add.dom) to align with the scaled canvas.
   dom:             { createContainer: true },
