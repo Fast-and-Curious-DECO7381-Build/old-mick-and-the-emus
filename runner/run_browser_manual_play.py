@@ -35,7 +35,7 @@ SEND_FPS = 10
 class BrowserManualSession(TerminalManualSession):
     def __init__(self) -> None:
         super().__init__()
-        #self._bootstrap_browser_manual()
+        self._bootstrap_browser_manual() # disable this to run from start menu to game loading screen.
 
     def _bootstrap_browser_manual(self) -> None:
         if not self.select_mode(MODE_NORMAL):
