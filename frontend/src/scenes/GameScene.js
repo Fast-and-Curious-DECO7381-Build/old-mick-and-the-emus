@@ -203,12 +203,14 @@ export class GameScene extends Phaser.Scene {
       g.strokeLineShape(new Phaser.Geom.Line(x0, y0 + i * ch, x1, y0 + i * ch));
     }
 
-    const labelStyle = { fontFamily: FONT_MONO, fontSize: "11px", color: "#c8a070" };
+    const labelStyle = { fontFamily: FONT_MONO, fontSize: "7px", color: "#c8a070" };
     for (let i = 0; i < GRID_SIZE; i++) {
-      this.add.text(x0 + i * cw + cw / 2, y0 - 16, colLabel(i), labelStyle).setOrigin(0.5).setDepth(0);
+      this.add.text(x0 + i * cw + cw / 2, y0 - 18, colLabel(i), labelStyle).setOrigin(0.5).setDepth(0);
+      this.add.text(x0 + i * cw + cw / 2, y1 + 18, colLabel(i), labelStyle).setOrigin(0.5).setDepth(0);
     }
     for (let i = 0; i < GRID_SIZE; i++) {
-      this.add.text(x0 - 18, y0 + i * ch + ch / 2, String(i + 1), labelStyle).setOrigin(0.5).setDepth(0);
+      this.add.text(x0 - 22, y0 + i * ch + ch / 2, String(i + 1), labelStyle).setOrigin(0.5).setDepth(0);
+      this.add.text(x1 + 22, y0 + i * ch + ch / 2, String(i + 1), labelStyle).setOrigin(0.5).setDepth(0);
     }
   }
 
@@ -316,8 +318,8 @@ export class GameScene extends Phaser.Scene {
 
     this._tutLayoutTextOnly = {
       panelW: maxPanelW, panelH: 252, pad: tutPad,
-      titleSize: 52, bodySize: 36, stepSize: 28, hintSize: 24,
-      headerY, bodyY: headerY + 62, hintBottomPad: 28, bodyLineSpacing: 12,
+      titleSize: 20, bodySize: 13, stepSize: 10, hintSize: 9,
+      headerY, bodyY: headerY + 42, hintBottomPad: 22, bodyLineSpacing: 8,
       gifW: 0, gifH: 0,
     };
     this._tutLayoutWithGif = {
@@ -327,8 +329,8 @@ export class GameScene extends Phaser.Scene {
       gifDomNudgeX: 14,
       gifDomNudgeY: 20,
       textGifGap: 16,
-      titleSize: 44, bodySize: 32, stepSize: 24, hintSize: 18,
-      headerY, bodyY: headerY + 54, hintBottomPad: 24, bodyLineSpacing: 12,
+      titleSize: 17, bodySize: 11, stepSize: 9, hintSize: 8,
+      headerY, bodyY: headerY + 34, hintBottomPad: 20, bodyLineSpacing: 7,
     };
     this._tutLayoutWithPic = {
       panelW: maxPanelW, panelH: 236, panelHMulti: 280, pad: tutPad,
@@ -338,8 +340,8 @@ export class GameScene extends Phaser.Scene {
       picDomNudgeX: 14,
       picDomNudgeY: 20,
       textPicGap: 16,
-      titleSize: 44, bodySize: 32, stepSize: 24, hintSize: 18,
-      headerY, bodyY: headerY + 54, hintBottomPad: 24, bodyLineSpacing: 12,
+      titleSize: 17, bodySize: 11, stepSize: 9, hintSize: 8,
+      headerY, bodyY: headerY + 34, hintBottomPad: 20, bodyLineSpacing: 7,
     };
 
     const L = this._tutLayoutTextOnly;
@@ -1567,7 +1569,7 @@ export class GameScene extends Phaser.Scene {
 
       if (!this._tutCellLabel) {
         this._tutCellLabel = this.add.text(0, 0, "", {
-          fontFamily: FONT_MONO, fontSize: "28px", fontStyle: "bold",
+          fontFamily: FONT_MONO, fontSize: "14px", fontStyle: "bold",
           color: "#ffd060", stroke: "#000000", strokeThickness: 4,
         }).setOrigin(0.5).setDepth(46);
       }
