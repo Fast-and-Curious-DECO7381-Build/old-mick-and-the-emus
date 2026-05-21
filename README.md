@@ -1,19 +1,29 @@
-# Old Micks and The Emus
+# # Old Mick and the Emus
+Old Mick and the Emus is an AR board game prototype using a camera to detects ArUco markers on a physical board and a browser that renders the live match.
 
-## Start Up
+## Start The Game
 
-### First-time setup
+### First-time Setting Up The Game
 
-At the repo root:
-
-```bash
+## Windows (PowerShell)
 python -m venv .venv
-.venv\Scripts\python -m pip install --upgrade pip
-.venv\Scripts\python -m pip install -r requirements.txt
-.venv\Scripts\python -m pip install -e .
-```
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -e .
 
-### Launch live demo (Windows)
+## Windows (Command Prompt)
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m pip install -e .
+
+## macOS
+python3 -m venv .venv
+./.venv/bin/python -m pip install --upgrade pip
+./.venv/bin/python -m pip install -r requirements.txt
+./.venv/bin/python -m pip install -e .
+
+### Launch Game (Windows)
 
 From the repo root:
 
@@ -30,8 +40,6 @@ This starts:
 ### Launch live demo (macOS)
 
 Recommended on macOS: use `launch_live_demo.command` (one-time: `chmod +x launch_live_demo.command`), then double-click it in Finder.
-
-### Windows demo launcher
 
 From the repo root, you can also start the live demo with one double-click:
 
@@ -57,31 +65,48 @@ Notes:
 - Close the tracker by focusing the camera preview window and pressing `Q`, or by closing the spawned PowerShell window.
 - `frontend/` is served directly by `run_live_tracker.py`. No `npm install`, Vite, or separate frontend dev server is required.
 
-### Start separately
 
-Run both commands from the repo root.
+### Marker Guide and Board Setup
+This game has two layers:
+    - The "digital layer" which is the UI for the game
+    - The "physical layer" to control the game
 
-Browser:
+Both layers are needed for the game to work correctly
 
-```bash
-start http://localhost:8080
-```
+## Marker Inventory
+| ID | Side | Role | Used during | Purpose |
+|----|------|------|-------------|---------|
+| `0` | Shared | `BOARD CORNER` | Board scan, setup, gameplay | Top-left board corner marker used for board calibration |
+| `1` | Shared | `BOARD CORNER` | Board scan, setup, gameplay | Top-right board corner marker used for board calibration |
+| `2` | Shared | `BOARD CORNER` | Board scan, setup, gameplay | Bottom-left board corner marker used for board calibration |
+| `3` | Shared | `BOARD CORNER` | Board scan, setup, gameplay | Bottom-right board corner marker used for board calibration |
+| `4` | Shared | `CONFIRM` | HQ setup, gameplay | Confirms HQ placement during setup and resolves the active side's turn during gameplay |
+| `5` | Shared | `HELP` | Setup, gameplay | Shows the help overlay while visible |
+| `10` | P1 | `TURN` | HQ setup, gameplay | Activates P1 setup or positioning flow |
+| `11` | P1 | `HQ` | HQ setup | Sets P1's live HQ candidate cell |
+| `12` | P1 | `ATK A` | Gameplay | P1 attacker token A |
+| `13` | P1 | `ATK B` | Gameplay | P1 attacker token B |
+| `14` | P1 | `DEF` | Gameplay | P1 defender token |
+| `19` | P1 | `NUKE` | Gameplay | Sets P1's pending nuke target when available |
+| `20` | P2 | `TURN` | HQ setup, gameplay | Activates P2 setup or positioning flow |
+| `21` | P2 | `HQ` | HQ setup | Sets P2's live HQ candidate cell |
+| `22` | P2 | `ATK A` | Gameplay | P2 attacker token A |
+| `23` | P2 | `ATK B` | Gameplay | P2 attacker token B |
+| `24` | P2 | `DEF` | Gameplay | P2 defender token |
+| `29` | P2 | `NUKE` | Gameplay | Sets P2's pending nuke target when available |
 
-Terminal 2, from `D:\Defend-Your-Pixels`:
+## Board Setup
+Set up the board only after running the game:
+1. Place the board flat on a stable surface.
+2. Place the four board-corner ArUco markers in their correct corner positions:
+    - ID 0 = top-left
+    - ID 1 = top-right
+    - ID 2 = bottom-left
+    - ID 3 = bottom-right
+3. Position the camera (preferebly on top) so the full board and all corner markers are visible at the same time.
+4. Keep the board well lit and avoid glare, shadows, and heavy occlusion.
+5. Keep markers printed clearly, flat, and facing the camera.
+6. Avoid moving the board or corner markers during scan or gameplay.
 
-```bash
-.venv\Scripts\python -m runner.run_live_tracker
-```
-
-Notes:
-- You can open the browser before or after starting Python. The page will retry the WebSocket connection automatically.
-- `start http://localhost:8080` is a Windows Command Prompt / PowerShell command.
-
-## Supported runner entrypoints
-
-The primary runner entrypoints are:
-
-- `runner.run_live_tracker`: full runtime for camera -> tracker -> shared live rules -> websocket -> HTTP -> `frontend/index.html`
-- `runner.run_manual_play`: no-camera manual runtime for local frontend and rules testing
-
-For a documented no-camera fallback, see `docs/manual_play.md` and `runner.run_manual_play`.
+## Game Rules
+Refer to the game design document to understand the game rules
