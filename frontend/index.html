@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Defend Your Pixels — The Great Emu War</title>
+  <title>Old Mick and the Emus</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Special+Elite&family=Oswald:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <script src="phaser.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="intro-stage">
 
   <div class="game-root">
 
@@ -86,6 +86,7 @@
 
     <!-- ═══════════════════════════════════ BOARD -->
     <main class="board-area">
+      <div id="intro-video-host" class="intro-video-host hidden" aria-hidden="true"></div>
       <div id="game-canvas"></div>
     </main>
 
@@ -164,15 +165,6 @@
   <!-- ═══════════════════════════════════ BOTTOM BAR -->
   <div class="notif-bar" id="notif-bar">
     <span id="notif-text">Waiting for server…</span>
-  </div>
-
-  <div class="mode-overlay" id="mode-overlay">
-    <div class="mode-card">
-      <div class="mode-title">DEFEND YOUR PIXELS</div>
-      <div class="mode-subtitle">Choose a play mode to start setup</div>
-      <button class="mode-button" id="mode-normal" type="button">NORMAL GAME</button>
-      <button class="mode-button mode-button-secondary" id="mode-tutorial" type="button">TUTORIAL</button>
-    </div>
   </div>
 
   <script type="module" src="src/main.js"></script>

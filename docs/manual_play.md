@@ -11,9 +11,6 @@ This document covers the runtime modes that let you use the current frontend and
 Entrypoint:
 
 - `runner/run_manual_play.py`
-<<<<<<< Updated upstream
-- `docs/manual_play.md`
-=======
 
 Use when:
 
@@ -26,7 +23,6 @@ Use when:
 Entrypoint:
 
 - `runner/run_browser_manual_play.py`
->>>>>>> Stashed changes
 
 Use when:
 
@@ -57,12 +53,6 @@ From the repository root, with `.venv` active:
 .\.venv\Scripts\python.exe -m runner.run_manual_play
 ```
 
-<<<<<<< Updated upstream
-This will:
-- start `runner.run_manual_play`
-
-Open `http://localhost:8080` separately in your browser.
-=======
 Browser manual play:
 
 ```powershell
@@ -100,7 +90,6 @@ Typical operator flow:
 5. Place tokens with `set` commands.
 6. Advance turns with `flip` or `turn 1` / `turn 2`.
 7. Watch the frontend update at `http://localhost:8080`.
->>>>>>> Stashed changes
 
 ## Terminal Commands
 
@@ -108,6 +97,8 @@ Typical operator flow:
 help
 show
 show_setup
+mode normal
+mode tutorial
 choose_side old_mick
 choose_side mob
 set_hq p1 A3
@@ -127,22 +118,7 @@ tier 2 -1
 quit
 ```
 
-<<<<<<< Updated upstream
-Rules for commands:
-- board cells use `A1` through `L12`
-- attackers need a direction: `E`, `SE`, `S`, `SW`, `W`, `NW`, `N`, `NE`
-- defenders only need a position
-- choose a setup side before confirming HQs
-- use `set_hq` and `confirm_hq` to finish hidden HQ setup
-- `flip` toggles turn `1 <-> 2`
-- `turn 1` or `turn 2` sets the current turn explicitly
-- `new_map` regenerates terrain and resets the setup flow
-- `tier` changes the same tier values the browser UI already renders
-- `show` prints a readable summary of the current state
-- `show_setup` prints setup-only progress and status
-=======
 Rules:
->>>>>>> Stashed changes
 
 - cells use `A1` through `L12`
 - attackers need a direction
@@ -152,18 +128,7 @@ Rules:
 
 ## Browser Manual Play Behavior
 
-<<<<<<< Updated upstream
-Typical flow:
-1. Launch the manual runner.
-2. Choose the first setup side with `choose_side old_mick` or `choose_side mob`.
-3. Set and confirm both HQs with `set_hq` and `confirm_hq`.
-4. Place both sides with `set` commands.
-5. Open or watch `http://localhost:8080`.
-6. Use `flip` or `turn 1` / `turn 2` to advance the battle and trigger attack resolution.
-7. Use `show` or `show_setup` whenever you want a terminal-side summary.
-=======
 `run_browser_manual_play.py` bootstraps directly into a playable `normal` match:
->>>>>>> Stashed changes
 
 - locks `normal` mode
 - chooses `old_mick` as the first setup side

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   Defend Your Pixels — Prototype 4 Stylesheet
+   Old Micks and The Emus — Prototype 4 Stylesheet
    Font: Press Start 2P (pixel retro)
    Layout: panel-left | board | panel-right  +  bottom bar
 ═══════════════════════════════════════════════════════════════ */
@@ -47,6 +47,12 @@ html, body {
 .panel-right.active-p2 {
   border-color: #e0b030;
   background: #1e1508;
+}
+
+.panel.tutorial-highlight {
+  outline: 3px solid #ffd060;
+  outline-offset: 2px;
+  box-shadow: 0 0 18px rgba(255, 208, 96, 0.45);
 }
 
 /* ── Score block ──────────────────────────────────────────────── */
@@ -263,8 +269,6 @@ html, body {
   justify-content: center;
   min-width: 0;
   background: #1a1208;
-<<<<<<< Updated upstream
-=======
   position: relative;
 }
 
@@ -341,15 +345,16 @@ body.intro-stage.intro-video-playing #game-canvas canvas {
 @keyframes intro-skip-pulse {
   from { opacity: 0.45; }
   to   { opacity: 1; }
->>>>>>> Stashed changes
 }
 
 #game-canvas {
+  position: relative;
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
 }
 #game-canvas canvas {
   display: block;
@@ -405,59 +410,3 @@ body.intro-stage.intro-video-playing #game-canvas canvas {
 .notif-bar.turn-p2   #notif-text { color: #f8e090; }
 .notif-bar.result-p1 #notif-text { color: #90ff70; }
 .notif-bar.result-p2 #notif-text { color: #ffe870; }
-
-/* ════════════════════════════════════════════════════════════════
-   MODE SELECT OVERLAY
-════════════════════════════════════════════════════════════════ */
-.mode-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(10, 6, 2, 0.86);
-  z-index: 1000;
-}
-.mode-overlay.hidden { display: none; }
-
-.mode-card {
-  width: min(520px, calc(100vw - 48px));
-  padding: 28px 24px;
-  background: #1a1208;
-  border: 3px solid #c8a030;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.65);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  text-align: center;
-}
-
-.mode-title {
-  font-size: 18px;
-  line-height: 1.45;
-  color: #f0e060;
-}
-
-.mode-subtitle {
-  font-size: 8px;
-  line-height: 1.8;
-  color: #a08040;
-  margin-bottom: 8px;
-}
-
-.mode-button {
-  border: 2px solid #e0b030;
-  background: #3a2810;
-  color: #ffe080;
-  font-family: 'Press Start 2P', system-ui;
-  font-size: 9px;
-  padding: 16px 12px;
-  cursor: pointer;
-}
-.mode-button:hover { background: #5a3a10; }
-.mode-button-secondary {
-  border-color: #6adf50;
-  color: #c8ffb0;
-  background: #183014;
-}
-.mode-button-secondary:hover { background: #245020; }

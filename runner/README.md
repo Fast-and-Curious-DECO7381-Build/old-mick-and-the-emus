@@ -4,15 +4,9 @@ This folder contains the runtime entrypoints that assemble the current applicati
 
 ## Purpose
 
-<<<<<<< Updated upstream
-Entry points
-- `run_live_tracker.py`: full live runtime for `camera -> python_tracker -> shared live rules -> websocket -> HTTP -> frontend/index.html`
-- `run_manual_play.py`: no-camera manual runtime for local frontend and rules testing
-=======
 - keep runtime assembly separate from tracker, rules, transport, and frontend code
 - expose the supported ways to launch the project
 - hold session/setup orchestration that belongs above the core model layer
->>>>>>> Stashed changes
 
 ## Naming Convention
 

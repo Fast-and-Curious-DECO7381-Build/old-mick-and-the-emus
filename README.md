@@ -1,8 +1,4 @@
-<<<<<<< Updated upstream
-# Defend Your Pixels
-=======
 # Old Mick and the Emus
->>>>>>> Stashed changes
 
 Old Mick and the Emus is a hybrid AR board game prototype.
 
