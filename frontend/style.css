@@ -263,6 +263,85 @@ html, body {
   justify-content: center;
   min-width: 0;
   background: #1a1208;
+<<<<<<< Updated upstream
+=======
+  position: relative;
+}
+
+/* Intro: fullscreen Start + video — hide game chrome until GameScene */
+body.intro-stage {
+  background: #000000 url('../assets/images/board.png') center / cover no-repeat;
+}
+body.intro-stage::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  z-index: 1;
+}
+body.intro-stage #game-canvas {
+  position: relative;
+  z-index: 2;
+}
+body.intro-stage .game-root {
+  width: 100%;
+  height: calc(100vh - 56px);
+  background: transparent;
+}
+body.intro-stage .panel-left,
+body.intro-stage .panel-right,
+body.intro-stage .notif-bar {
+  display: none !important;
+}
+body.intro-stage .board-area {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+}
+body.intro-stage #game-canvas canvas {
+  background: transparent !important;
+}
+body.intro-stage.intro-video-playing #game-canvas canvas {
+  visibility: hidden;
+}
+
+/* Story video — HTML layer aligned to board area, native aspect ratio */
+.intro-video-host {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000000;
+  cursor: pointer;
+}
+.intro-video-host.hidden {
+  display: none;
+}
+.intro-video-host video {
+  display: block;
+  object-fit: none;
+  max-width: 100%;
+  max-height: 100%;
+}
+.intro-video-skip {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: monospace;
+  font-size: 11px;
+  color: #d4a030;
+  pointer-events: none;
+  animation: intro-skip-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes intro-skip-pulse {
+  from { opacity: 0.45; }
+  to   { opacity: 1; }
+>>>>>>> Stashed changes
 }
 
 #game-canvas {

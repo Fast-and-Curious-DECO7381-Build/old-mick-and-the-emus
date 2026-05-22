@@ -110,17 +110,40 @@ export class GameScene extends Phaser.Scene {
     this._nukeArmingSide  = null;
     this._prevWinner      = null;
     this._terrainSprites  = [];
+<<<<<<< Updated upstream
     this._terrainHpLabels = [];
     this._rayGfxPool      = [];   // recycled Graphics objects for ray animations
     this._pickerData      = null; // {container, col, row, side} when picker is open
     this._lastActiveSide  = null; // track turn changes
+=======
+    this._terrainHpGfx    = null;
+    this._rayGfxPool      = [];   // recycled Graphics objects for ray animations
+    this._pickerData      = null; // {container, col, row, side} when picker is open
+    this._lastActiveSide  = null; // track turn changes
+    this._bgmStarted      = false; // ensure BGM only starts once
+    this._returningToIntro = false;
+    this._cleanedUp        = false;
+    this._wsStateHandler   = null;
+    this._wsEventsHandler  = null;
+    this._resizeHandler    = null;
+    this._demoNextHandler  = null;
+    this._spaceKeyHandler  = null;
+    this._undoKeyHandler   = null;
+    this._nukeArmHandler   = null;
+>>>>>>> Stashed changes
   }
 
   create() {
+    this._cleanedUp = false;
+    this._returningToIntro = false;
+    this.events.once("shutdown", this._cleanupScene, this);
+    this.events.once("destroy", this._cleanupScene, this);
+    this.cameras.main.setBackgroundColor("#0f0c08");
     this.boardGfx    = this.add.graphics().setDepth(0);
     this.resourceGfx = this.add.graphics().setDepth(1);
     this.dmgGfx      = this.add.graphics().setDepth(2);
     this.dynGfx      = this.add.graphics().setDepth(3);
+    this._terrainHpGfx = this.add.graphics().setDepth(9);
 
     this._buildBoardImage();
     this._drawGridOnce();
@@ -134,12 +157,22 @@ export class GameScene extends Phaser.Scene {
 
     this.input.on("pointerdown", this._handleBoardClick, this);
 
-    this.input.keyboard.on("keydown-N", () => this.ws?.send("demo_next", {}));
+    this._demoNextHandler = () => this.ws?.send("demo_next", {});
+    this.input.keyboard.on("keydown-N", this._demoNextHandler);
 
     this.time.addEvent({ delay: 33, loop: true, callback: () => this._render() });
 
+<<<<<<< Updated upstream
+=======
+    this._resizeHandler = () => {
+      if (this._tutGifDom?.visible) this._syncTutorialGifDomPosition();
+      if (this._tutPicDom?.visible) this._syncTutorialPicDomPosition();
+    };
+    this.scale.on("resize", this._resizeHandler);
+
+>>>>>>> Stashed changes
     // ── Nuke bridge: HTML card click → Phaser ────────────────────────────────
-    window._nukeArm = (side) => {
+    this._nukeArmHandler = (side) => {
       const s = this.gameState;
       if (!s || s.phase !== "game") return;
       const activeSide = s.battle?.active_side;
@@ -150,6 +183,52 @@ export class GameScene extends Phaser.Scene {
       // Brief visual feedback: flash the board border
       this.cameras.main.flash(200, 255, 140, 0, false);
     };
+    window._nukeArm = this._nukeArmHandler;
+  }
+
+  _cleanupScene() {
+    if (this._cleanedUp) return;
+    this._cleanedUp = true;
+
+    this.input.off("pointerdown", this._handleBoardClick, this);
+    if (this._demoNextHandler) {
+      this.input.keyboard.off("keydown-N", this._demoNextHandler);
+      this._demoNextHandler = null;
+    }
+    if (this._spaceKeyHandler) {
+      this.input.keyboard.off("keydown-SPACE", this._spaceKeyHandler);
+      this._spaceKeyHandler = null;
+    }
+    if (this._undoKeyHandler) {
+      this.input.keyboard.off("keydown-W", this._undoKeyHandler);
+      this._undoKeyHandler = null;
+    }
+    if (this._resizeHandler) {
+      this.scale.off("resize", this._resizeHandler);
+      this._resizeHandler = null;
+    }
+    if (this.ws && this._wsStateHandler) {
+      this.ws.off("state", this._wsStateHandler);
+      this._wsStateHandler = null;
+    }
+    if (this.ws && this._wsEventsHandler) {
+      this.ws.off("events", this._wsEventsHandler);
+      this._wsEventsHandler = null;
+    }
+    if (window._nukeArm === this._nukeArmHandler) {
+      window._nukeArm = null;
+    }
+    this._nukeArmHandler = null;
+    this._terrainHpGfx?.destroy();
+    this._terrainHpGfx = null;
+    this._hideTokenPicker();
+  }
+
+  _returnToIntro(state) {
+    if (this._returningToIntro) return;
+    this._returningToIntro = true;
+    this._cleanupScene();
+    this.scene.start("Intro", { ws: this.ws, initialState: state, replay: true });
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -178,18 +257,21 @@ export class GameScene extends Phaser.Scene {
       g.strokeLineShape(new Phaser.Geom.Line(x0, y0 + i * ch, x1, y0 + i * ch));
     }
 
-    const labelStyle = { fontFamily: FONT_MONO, fontSize: "11px", color: "#c8a070" };
+    const labelStyle = { fontFamily: FONT_MONO, fontSize: "7px", color: "#c8a070" };
     for (let i = 0; i < GRID_SIZE; i++) {
-      this.add.text(x0 + i * cw + cw / 2, y0 - 16, colLabel(i), labelStyle).setOrigin(0.5).setDepth(0);
+      this.add.text(x0 + i * cw + cw / 2, y0 - 18, colLabel(i), labelStyle).setOrigin(0.5).setDepth(0);
+      this.add.text(x0 + i * cw + cw / 2, y1 + 18, colLabel(i), labelStyle).setOrigin(0.5).setDepth(0);
     }
     for (let i = 0; i < GRID_SIZE; i++) {
-      this.add.text(x0 - 18, y0 + i * ch + ch / 2, String(i + 1), labelStyle).setOrigin(0.5).setDepth(0);
+      this.add.text(x0 - 22, y0 + i * ch + ch / 2, String(i + 1), labelStyle).setOrigin(0.5).setDepth(0);
+      this.add.text(x1 + 22, y0 + i * ch + ch / 2, String(i + 1), labelStyle).setOrigin(0.5).setDepth(0);
     }
   }
 
   _buildTokenSprites() {
     const sz  = CELL * 0.88;
     const TEX = {
+<<<<<<< Updated upstream
       p1_atk_a: "tok_mick_atk_a",
       p1_atk_b: "tok_mick_atk_b",
       p1_def:   "tok_mick_def",
@@ -198,6 +280,16 @@ export class GameScene extends Phaser.Scene {
       p2_atk_b: "tok_emu_atk_b",
       p2_def:   "tok_emu_def",
       p2_nuke:  "tok_emu_nuke",
+=======
+      p1_atk_a:   "tok_mick_atk_a",
+      p1_atk_b:   "tok_mick_atk_b",
+      p1_def:     "tok_mick_def",
+      p1_def_2:   "tok_mick_def_2",
+      p2_atk_a:   "tok_emu_atk_a",
+      p2_atk_b:   "tok_emu_atk_b",
+      p2_def:     "tok_emu_def",
+      p2_def_2:   "tok_emu_def_2",
+>>>>>>> Stashed changes
     };
 
     this.tokenSprites    = {};
@@ -249,34 +341,75 @@ export class GameScene extends Phaser.Scene {
   _buildWinOverlay() {
     const cx = CANVAS_W / 2;
     const cy = CANVAS_H / 2;
+    const panelW = 620;
+    const panelH = 290;
+
+    this._winLayout = {
+      panelW,
+      panelH,
+      titleY: -102,
+      subY: -58,
+      subWrapW: 340,
+      hqX: 228,
+      hqY: 56,
+      hqSize: 76,
+      hintY: 82,
+      hintGap: 18,
+      buttonY: 118,
+      buttonGap: 18,
+      buttonH: 34,
+      bottomPad: 24,
+    };
 
     this._winDimRect = this.add.rectangle(cx, cy, BOARD_PX, BOARD_PX, 0x000000, 0)
       .setDepth(39).setVisible(false);
 
     this.winContainer = this.add.container(cx, cy).setDepth(40).setVisible(false);
 
-    const bg = this.add.rectangle(0, 0, 560, 160, 0x080502, 0.96)
+    const bg = this.add.rectangle(0, 0, panelW, panelH, 0x080502, 0.96)
       .setStrokeStyle(2, 0xd4a030, 1);
 
-    this._winTitleTxt = this.add.text(0, -42, "", {
+    this._winTitleTxt = this.add.text(0, this._winLayout.titleY, "", {
       fontFamily: FONT_TITLE, fontSize: "36px", fontStyle: "bold",
       color: "#ffe070", stroke: "#3a2010", strokeThickness: 4,
     }).setOrigin(0.5);
 
-    this._winSubTxt = this.add.text(0, 8, "", {
+    this._winSubTxt = this.add.text(0, this._winLayout.subY, "", {
       fontFamily: FONT_LABEL, fontSize: "15px",
-      color: "#f0c080", align: "center", wordWrap: { width: 500 },
-    }).setOrigin(0.5);
+      color: "#f0c080", align: "center", wordWrap: { width: this._winLayout.subWrapW },
+    }).setOrigin(0.5, 0);
 
-    this._winHintTxt = this.add.text(0, 54, "Press N to advance demo", {
+    this._winHintTxt = this.add.text(0, this._winLayout.hintY, "Choose a mode to start again.", {
       fontFamily: FONT_MONO, fontSize: "10px", color: "#6a5030",
     }).setOrigin(0.5);
 
-    this._winHqLeft  = this.add.image(-220, 0, "hq_grain_stash").setDisplaySize(80, 80).setDepth(41);
-    this._winHqRight = this.add.image( 220, 0, "hq_bird_council" ).setDisplaySize(80, 80).setDepth(41);
+    this._playAgainBtn = this.add.container(0, this._winLayout.buttonY).setSize(220, 34).setVisible(false);
+    this._playAgainBtnBg = this.add.rectangle(0, 0, 220, 34, 0x1a1208)
+      .setStrokeStyle(2, 0xd4a030, 1)
+      .setInteractive({ useHandCursor: true });
+    this._playAgainBtnTxt = this.add.text(0, 0, "PLAY AGAIN", {
+      fontFamily: "'Press Start 2P'",
+      fontSize: "9px",
+      color: "#f0e060",
+    }).setOrigin(0.5);
+    this._playAgainBtnBg.on("pointerover", () => this._playAgainBtnBg.setFillStyle(0x2e2010));
+    this._playAgainBtnBg.on("pointerout", () => this._playAgainBtnBg.setFillStyle(0x1a1208));
+    this._playAgainBtnBg.on("pointerdown", (_pointer, _localX, _localY, event) => {
+      event?.stopPropagation?.();
+      playSfx(this, "sfx_select");
+      this.ws?.send("return_to_mode_select", {});
+    });
+    this._playAgainBtn.add([this._playAgainBtnBg, this._playAgainBtnTxt]);
+
+    this._winHqLeft  = this.add.image(-this._winLayout.hqX, this._winLayout.hqY, "hq_grain_stash")
+      .setDisplaySize(this._winLayout.hqSize, this._winLayout.hqSize)
+      .setDepth(41);
+    this._winHqRight = this.add.image( this._winLayout.hqX, this._winLayout.hqY, "hq_bird_council")
+      .setDisplaySize(this._winLayout.hqSize, this._winLayout.hqSize)
+      .setDepth(41);
 
     this.winContainer.add([bg, this._winTitleTxt, this._winSubTxt, this._winHintTxt,
-                           this._winHqLeft, this._winHqRight]);
+                           this._winHqLeft, this._winHqRight, this._playAgainBtn]);
   }
 
   _buildTutorialOverlay() {
@@ -285,8 +418,41 @@ export class GameScene extends Phaser.Scene {
 
     this.tutorialContainer = this.add.container(cx, topY).setDepth(50).setVisible(false);
 
+<<<<<<< Updated upstream
     const panelW = 550, panelH = 140;
     const bg = this.add.rectangle(0, 0, panelW, panelH, 0x1a1008, 0.95)
+=======
+    this._tutLayoutTextOnly = {
+      panelW: maxPanelW, panelH: 252, pad: tutPad,
+      titleSize: 20, bodySize: 13, stepSize: 10, hintSize: 9,
+      headerY, bodyY: headerY + 42, hintBottomPad: 22, bodyLineSpacing: 8,
+      gifW: 0, gifH: 0,
+    };
+    this._tutLayoutWithGif = {
+      panelW: maxPanelW, panelH: 220, panelHBase: 220, pad: tutPad,
+      gifW: 188, gifH: 132,
+      gifInsetRight: 0,
+      gifDomNudgeX: 14,
+      gifDomNudgeY: 20,
+      textGifGap: 16,
+      titleSize: 17, bodySize: 11, stepSize: 9, hintSize: 8,
+      headerY, bodyY: headerY + 34, hintBottomPad: 20, bodyLineSpacing: 7,
+    };
+    this._tutLayoutWithPic = {
+      panelW: maxPanelW, panelH: 236, panelHMulti: 280, pad: tutPad,
+      picW: 200, picH: 148,
+      picWMulti: 300, picHMulti: 200,
+      picInsetRight: 0,
+      picDomNudgeX: 14,
+      picDomNudgeY: 20,
+      textPicGap: 16,
+      titleSize: 17, bodySize: 11, stepSize: 9, hintSize: 8,
+      headerY, bodyY: headerY + 34, hintBottomPad: 20, bodyLineSpacing: 7,
+    };
+
+    const L = this._tutLayoutTextOnly;
+    this._tutBg = this.add.rectangle(0, 0, L.panelW, L.panelH, 0x1a1008, 0.95)
+>>>>>>> Stashed changes
       .setStrokeStyle(2, 0xffd060);
 
     this._tutStepTxt = this.add.text(panelW / 2 - 12, -panelH / 2 + 12, "", {
@@ -309,6 +475,7 @@ export class GameScene extends Phaser.Scene {
     this.tutorialContainer.add([bg, this._tutStepTxt, this._tutTitleTxt, this._tutTextTxt, this._tutHintTxt]);
     this.tutHighlightGfx = this.add.graphics().setDepth(45);
 
+<<<<<<< Updated upstream
     this.input.keyboard.on("keydown-SPACE", () => {
       const tut = this.gameState?.tutorial;
       if (tut?.active && tut?.needs_dismiss) this._sendTutorialDismiss();
@@ -320,6 +487,268 @@ export class GameScene extends Phaser.Scene {
       const tut = this.gameState?.tutorial;
       if (tut?.active && tut?.needs_dismiss) this._sendTutorialDismiss();
     });
+=======
+    this._tutHitArea = this.add.zone(0, 0, L.panelW, L.panelH)
+      .setInteractive({ useHandCursor: true });
+    this.tutorialContainer.add(this._tutHitArea);
+    this._tutHitArea.on("pointerdown", () => {
+      const tut = this.gameState?.tutorial;
+      if (tut?.active && this._tutorialCanSpaceContinue(tut)) this._sendTutorialDismiss();
+    });
+
+    this._spaceKeyHandler = () => {
+      const tut = this.gameState?.tutorial;
+      if (tut?.active && this._tutorialCanSpaceContinue(tut)) this._sendTutorialDismiss();
+    };
+    this.input.keyboard.on("keydown-SPACE", this._spaceKeyHandler);
+    this._undoKeyHandler = () => {
+      const tut = this.gameState?.tutorial;
+      if (tut?.active && tut?.can_undo) {
+        this.ws?.send("tutorial_undo", {});
+        playSfx(this, "sfx_select");
+      }
+    };
+    this.input.keyboard.on("keydown-W", this._undoKeyHandler);
+
+    this._applyTutorialLayout("text");
+  }
+
+  _tutorialBodyLineCount(text) {
+    const raw = (text || "").trim();
+    if (!raw) return 1;
+    return raw.split("\n").length;
+  }
+
+  _tutorialGifPanelHeight(L, bodyText) {
+    const base = L.panelHBase ?? L.panelH;
+    const lines = this._tutorialBodyLineCount(bodyText);
+    if (lines < 4) return base;
+    const lineStep = L.bodySize + (L.bodyLineSpacing ?? 12);
+    return base + (lines - 3) * lineStep;
+  }
+
+  _syncTutorialMediaDom(dom, lay, worldVec) {
+    if (!lay || !dom) return;
+    dom.setOrigin(0, 0);
+    const mat = this.tutorialContainer.getWorldTransformMatrix();
+    mat.transformPoint(lay.x, lay.y, worldVec);
+    const nudgeX = lay.domNudgeX ?? 0;
+    const nudgeY = lay.domNudgeY ?? 0;
+    dom.setPosition(worldVec.x + nudgeX, worldVec.y + nudgeY);
+    if (typeof dom.setSize === "function") {
+      dom.setSize(lay.w, lay.h);
+    }
+  }
+
+  _applyTutorialLayout(mode, { picCount = 1, bodyText = "" } = {}) {
+    const L = mode === "gif"
+      ? this._tutLayoutWithGif
+      : mode === "pic"
+        ? this._tutLayoutWithPic
+        : this._tutLayoutTextOnly;
+    const multiPic = mode === "pic" && picCount > 1;
+    let panelH = multiPic ? (L.panelHMulti ?? L.panelH) : L.panelH;
+    if (mode === "gif") {
+      panelH = this._tutorialGifPanelHeight(L, bodyText);
+    }
+    const { panelW, pad } = L;
+    const mediaW = mode === "pic"
+      ? (multiPic ? (L.picWMulti ?? L.picW) : (L.picW ?? 0))
+      : (L.gifW ?? 0);
+    const mediaH = mode === "pic"
+      ? (multiPic ? (L.picHMulti ?? L.picH) : (L.picH ?? 0))
+      : (L.gifH ?? 0);
+    const hasMedia = mode === "gif" || mode === "pic";
+
+    this._tutBg.setSize(panelW, panelH);
+
+    const centerY = BOARD_OFF_Y + 20 + panelH / 2;
+    this.tutorialContainer.setPosition(CANVAS_W / 2, centerY);
+
+    const mediaInsetRight = L.gifInsetRight ?? L.picInsetRight ?? 0;
+    const textMediaGap    = L.textGifGap ?? L.textPicGap ?? 16;
+    const leftMinX = -panelW / 2 + pad;
+    const leftMaxX = hasMedia
+      ? panelW / 2 - mediaW - pad - mediaInsetRight - textMediaGap
+      : panelW / 2 - pad;
+    const leftCx   = (leftMinX + leftMaxX) / 2;
+    const textW    = Math.max(120, leftMaxX - leftMinX);
+
+    const headerY = L.headerY ?? L.titleY ?? pad;
+    const headerBlockH = Math.max(L.titleSize, L.stepSize) + 6;
+    const bodyY = mode === "gif"
+      ? headerY + headerBlockH
+      : (L.bodyY ?? headerY + 56);
+    const hintBottomPad = L.hintBottomPad ?? 18;
+
+    this._tutStepTxt
+      .setPosition(panelW / 2 - pad, -panelH / 2 + headerY)
+      .setOrigin(1, 0)
+      .setFontSize(L.stepSize);
+    this._tutTitleTxt
+      .setPosition(leftCx, -panelH / 2 + headerY)
+      .setOrigin(0.5, 0)
+      .setFontSize(L.titleSize);
+    this._tutTextTxt
+      .setPosition(leftCx, -panelH / 2 + bodyY)
+      .setFontSize(L.bodySize)
+      .setWordWrapWidth(textW, true)
+      .setStyle({ lineSpacing: L.bodyLineSpacing ?? 12 });
+    this._tutHintTxt
+      .setPosition(leftCx, panelH / 2 - hintBottomPad)
+      .setFontSize(L.hintSize);
+
+    if (mode === "gif") {
+      const gifTop = panelH - pad - mediaH;
+      this._tutGifLayout = {
+        x: panelW / 2 - mediaInsetRight - mediaW,
+        y: -panelH / 2 + gifTop,
+        w: mediaW,
+        h: mediaH,
+        domNudgeX: L.gifDomNudgeX ?? 0,
+        domNudgeY: L.gifDomNudgeY ?? 0,
+      };
+      const wrap = this._tutGifDom.node?.querySelector(".tut-gif-wrap");
+      if (wrap) {
+        wrap.style.width  = `${mediaW}px`;
+        wrap.style.height = `${mediaH}px`;
+      }
+      this._tutPicLayout = null;
+      this._tutPicDom?.setVisible(false);
+      this._syncTutorialGifDomPosition();
+    } else {
+      this._tutGifLayout = null;
+      this._tutGifDom?.setVisible(false);
+    }
+
+    if (mode === "pic") {
+      const picTop = panelH - pad - mediaH;
+      this._tutPicLayout = {
+        x: panelW / 2 - mediaInsetRight - mediaW,
+        y: -panelH / 2 + picTop,
+        w: mediaW,
+        h: mediaH,
+        domNudgeX: L.picDomNudgeX ?? 0,
+        domNudgeY: L.picDomNudgeY ?? 0,
+      };
+      const wrap = this._tutPicDom.node?.querySelector(".tut-pic-wrap");
+      if (wrap) {
+        wrap.style.width  = `${mediaW}px`;
+        wrap.style.height = `${mediaH}px`;
+      }
+      this._tutGifLayout = null;
+      this._tutGifDom?.setVisible(false);
+      this._syncTutorialPicDomPosition();
+    } else if (mode !== "gif") {
+      this._tutPicLayout = null;
+      this._tutPicDom?.setVisible(false);
+    }
+
+    if (this._tutHitArea) this._tutHitArea.setSize(panelW, panelH);
+  }
+
+  /** Position tutorial GIF in canvas space (DOM ignores container parent transform). */
+  _syncTutorialGifDomPosition() {
+    const lay = this._tutGifLayout;
+    if (!lay || !this._tutGifDom) return;
+    this._syncTutorialMediaDom(this._tutGifDom, lay, this._tutGifWorld);
+  }
+
+  _setTutorialGifSrc(url) {
+    const dom = this._tutGifDom;
+    if (!dom?.node || !url) return;
+    const img = dom.node.querySelector?.("img.tut-gif-img")
+      || (dom.node.matches?.("img") ? dom.node : null);
+    if (!img) return;
+    const src = resolveTutorialAssetUrl(url) || url;
+    if (img.dataset.tutSrc === src) return;
+    img.dataset.tutSrc = src;
+    img.src = src;
+  }
+
+  _syncTutorialPicDomPosition() {
+    const lay = this._tutPicLayout;
+    if (!lay || !this._tutPicDom) return;
+    this._syncTutorialMediaDom(this._tutPicDom, lay, this._tutPicWorld);
+  }
+
+  _setTutorialPicSrcs(urls) {
+    const wrap = this._tutPicDom?.node?.querySelector(".tut-pic-wrap");
+    if (!wrap || !urls?.length) return;
+    const resolved = urls.map(resolveTutorialAssetUrl).filter(Boolean);
+    if (!resolved.length) return;
+    const key = resolved.join("|");
+    if (wrap.dataset.tutSrc === key) return;
+    wrap.dataset.tutSrc = key;
+    const multi = resolved.length > 1;
+    wrap.style.display = "flex";
+    wrap.style.flexDirection = "row";
+    wrap.style.alignItems = "center";
+    wrap.style.justifyContent = "center";
+    wrap.style.gap = multi ? "8px" : "0";
+    wrap.innerHTML = resolved.map((url) => (
+      `<img class="tut-pic-img" src="${url}" alt="" style="${
+        multi
+          ? "flex:1 1 0;min-width:0;max-width:calc(50% - 4px);height:100%;object-fit:contain;display:block;"
+          : "width:100%;height:100%;object-fit:contain;display:block;"
+      }" />`
+    )).join("");
+  }
+
+  _drawTutorialAlternateSides() {
+    this._drawTutorialSideCells("p1");
+    this._drawTutorialSideCells("p2");
+  }
+
+  /** Pulse-highlight all cells on one side (e.g. Mob / Emu territory for explain_win). */
+  _drawTutorialSideCells(side) {
+    const cw = GRID_DRAW_W / GRID_SIZE;
+    const ch = GRID_DRAW_H / GRID_SIZE;
+    const pulse = 0.5 + 0.5 * Math.sin(this.time.now / 220);
+    const color = side === "p1" ? 0xe8a030 : 0x60e8a0;
+
+    for (let col = 0; col < GRID_SIZE; col++) {
+      for (let row = 0; row < GRID_SIZE; row++) {
+        if (sideOfTutorialCell(col, row) !== side) continue;
+        const bx = BOARD_OFF_X + GRID_INSET_X + col * cw;
+        const by = BOARD_OFF_Y + GRID_INSET_Y + row * ch;
+        const alpha = 0.08 + 0.10 * pulse;
+        this.tutHighlightGfx.fillStyle(color, alpha);
+        this.tutHighlightGfx.fillRect(bx + 1, by + 1, cw - 2, ch - 2);
+        this.tutHighlightGfx.lineStyle(2, color, 0.35 + 0.35 * pulse);
+        this.tutHighlightGfx.strokeRect(bx + 1, by + 1, cw - 2, ch - 2);
+      }
+    }
+  }
+
+  _tutorialCanSpaceContinue(tut) {
+    return !!(tut?.needs_dismiss || tut?.allow_skip);
+  }
+
+  _updateTutorialHint(tut) {
+    if (!tut?.active) {
+      this._tutHintTxt.setVisible(false);
+      return;
+    }
+    if (tut.completed) {
+      this._tutHintTxt
+        .setText("Tutorial complete! Press SPACE or click to play.")
+        .setVisible(true);
+      return;
+    }
+    const parts = [];
+    if (tut.needs_dismiss || tut.allow_skip) parts.push("SPACE or click to continue");
+    if (tut.allow_skip && !tut.needs_dismiss) parts.push("SPACE to skip");
+    if (tut.needs_confirm) parts.push("Scan the confirm marker to continue");
+    else if (tut.needs_token) parts.push("Place and aim the token as shown");
+    else if (tut.allow_skip && !tut.needs_dismiss) parts.push("Scan the correct turn marker to continue");
+    if (tut.can_undo) parts.push("W to undo");
+    if (parts.length) {
+      this._tutHintTxt.setText(parts.join(" · ")).setVisible(true);
+    } else {
+      this._tutHintTxt.setVisible(false);
+    }
+>>>>>>> Stashed changes
   }
 
   _sendTutorialDismiss() {
@@ -673,6 +1102,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this._renderDamage(G);
+    this._renderTerrainHpLabels(s);
 
     this.dynGfx.clear();
     const { hardMap, softMap, destroyedMap, p1TargetMap, p2TargetMap } = this._buildMaps(s);
@@ -811,6 +1241,62 @@ export class GameScene extends Phaser.Scene {
       g.strokeLineShape(new Phaser.Geom.Line(bx + 9, by + 9, bx + cw - 9, by + ch - 9));
       g.strokeLineShape(new Phaser.Geom.Line(bx + cw - 9, by + 9, bx + 9,  by + ch - 9));
     }
+  }
+
+  _renderTerrainHpLabels(state) {
+    const terrain = state?.terrain;
+    const G = state?.game || {};
+    const g = this._terrainHpGfx;
+    if (!g) return;
+
+    g.clear();
+    if (!terrain) return;
+
+    const hardGoneKeys = new Set((G.hard_gone || []).map(([c, r]) => `${c},${r}`));
+    const softGoneKeys = new Set((G.soft_gone || []).map(([c, r]) => `${c},${r}`));
+    const hardMaxHp = Number(G.hard_terrain_hp ?? 5);
+    const softMaxHp = Number(G.soft_terrain_hp ?? 2);
+    const cw = GRID_DRAW_W / GRID_SIZE;
+    const ch = GRID_DRAW_H / GRID_SIZE;
+
+    const show = (kind, tile, maxHp, damageMap, goneKeys, fillColor) => {
+      const key = `${tile.col},${tile.row}`;
+      if (goneKeys.has(key)) return;
+
+      const damage = Number(damageMap?.[key] ?? 0);
+      const remaining = Math.max(0, maxHp - damage);
+      if (remaining <= 0) return;
+
+      const dotCount = Math.max(1, maxHp);
+      const radius = kind === "hard" ? 2.1 : 2.3;
+      const gap = 2.2;
+      const totalW = dotCount * radius * 2 + (dotCount - 1) * gap;
+      const bx = BOARD_OFF_X + GRID_INSET_X + tile.col * cw;
+      const by = BOARD_OFF_Y + GRID_INSET_Y + tile.row * ch;
+      const startX = bx + cw * 0.68 - totalW / 2 + radius;
+      const y = by + ch * 0.76;
+
+      g.fillStyle(0x000000, 0.42);
+      g.fillRoundedRect(startX - radius - 2, y - radius - 2, totalW + 4, radius * 2 + 4, 4);
+
+      for (let i = 0; i < dotCount; i++) {
+        const x = startX + i * (radius * 2 + gap);
+        if (i < remaining) {
+          g.fillStyle(fillColor, 0.95);
+          g.fillCircle(x, y, radius);
+        } else {
+          g.fillStyle(0x000000, 0.55);
+          g.fillCircle(x, y, radius);
+          g.lineStyle(1, fillColor, 0.55);
+          g.strokeCircle(x, y, radius);
+        }
+      }
+    };
+
+    for (const t of terrain.p1_hard || []) show("hard", t, hardMaxHp, G.hard_damage, hardGoneKeys, 0xffd060);
+    for (const t of terrain.p2_hard || []) show("hard", t, hardMaxHp, G.hard_damage, hardGoneKeys, 0xffd060);
+    for (const t of terrain.p1_soft || []) show("soft", t, softMaxHp, G.soft_damage, softGoneKeys, 0xffb080);
+    for (const t of terrain.p2_soft || []) show("soft", t, softMaxHp, G.soft_damage, softGoneKeys, 0xffb080);
   }
 
   // ─── Defence zone ───────────────────────────────────────────────────────────
@@ -997,7 +1483,19 @@ export class GameScene extends Phaser.Scene {
     const cw = GRID_DRAW_W / GRID_SIZE, ch = GRID_DRAW_H / GRID_SIZE;
 
     const draw = (key, tok) => {
-      const sprite = this.tokenSprites[key];
+      const side = key.startsWith("p1") ? "p1" : "p2";
+      const role = key.replace(`${side}_`, "");
+
+      // Swap defense sprite based on tier
+      let spriteKey = key;
+      if (role === "def") {
+        const defTier = side === "p1" ? (G?.def_tier_p1 ?? 0) : (G?.def_tier_p2 ?? 0);
+        if (defTier >= 1) {
+          spriteKey = `${side}_def_2`;
+        }
+      }
+
+      const sprite = this.tokenSprites[spriteKey];
       const badge  = this.tokenBadges[key];
       const arrow  = this.tokenArrows[key];
       const warn   = this.tokenWarnLabels[key];
@@ -1014,8 +1512,6 @@ export class GameScene extends Phaser.Scene {
       const { x, y } = cellXY(tok.col, tok.row);
       const stale    = !!tok.stale;
       const alpha    = stale ? 0.45 : 1;
-      const side     = key.startsWith("p1") ? "p1" : "p2";
-      const role     = key.replace(`${side}_`, "");
       const tier     = role === "def"
         ? (side === "p1" ? (G?.def_tier_p1 ?? 0) : (G?.def_tier_p2 ?? 0))
         : (G?.atk_tiers?.[side]?.[role] ?? 0);
@@ -1133,6 +1629,7 @@ export class GameScene extends Phaser.Scene {
     if (!G.winner) {
       this.winContainer.setVisible(false);
       this._winDimRect.setVisible(false);
+      this._playAgainBtn?.setVisible(false);
       return;
     }
 
@@ -1146,6 +1643,18 @@ export class GameScene extends Phaser.Scene {
     const [title, sub] = msgs[G.win_reason] ?? [`${G.winner?.toUpperCase()} WINS`, ""];
     this._winTitleTxt.setText(title);
     this._winSubTxt.setText(sub);
+    const layout = this._winLayout;
+    const subBottom = this._winSubTxt.y + this._winSubTxt.height;
+    const minHintY = subBottom + layout.hintGap + this._winHintTxt.height / 2;
+    const minButtonY = minHintY + this._winHintTxt.height / 2 + layout.buttonGap + layout.buttonH / 2;
+    const maxButtonY = layout.panelH / 2 - layout.bottomPad - layout.buttonH / 2;
+    const buttonY = Math.min(Math.max(layout.buttonY, minButtonY), maxButtonY);
+    const maxHintY = buttonY - layout.buttonH / 2 - layout.buttonGap - this._winHintTxt.height / 2;
+    const hintY = Math.min(Math.max(layout.hintY, minHintY), maxHintY);
+
+    this._winHintTxt.setY(hintY);
+    this._playAgainBtn.setY(buttonY);
+    this._playAgainBtn?.setVisible(true);
 
     const loser      = G.win_reason === "homestead_destroyed" ? "p1" : "p2";
     const winnerSide = loser === "p1" ? "p2" : "p1";
@@ -1190,8 +1699,13 @@ export class GameScene extends Phaser.Scene {
 
       if (!this._tutCellLabel) {
         this._tutCellLabel = this.add.text(0, 0, "", {
+<<<<<<< Updated upstream
           fontFamily: FONT_MONO, fontSize: "12px", fontStyle: "bold",
           color: "#ffd060", stroke: "#000000", strokeThickness: 3,
+=======
+          fontFamily: FONT_MONO, fontSize: "14px", fontStyle: "bold",
+          color: "#ffd060", stroke: "#000000", strokeThickness: 4,
+>>>>>>> Stashed changes
         }).setOrigin(0.5).setDepth(46);
       }
       this._tutCellLabel.setText(`${colLabel(col)}${row + 1}`)
@@ -1243,7 +1757,20 @@ export class GameScene extends Phaser.Scene {
   _bindWS() {
     if (!this.ws) return;
 
+<<<<<<< Updated upstream
     this.ws.on("state", (s) => {
+=======
+    // Track previous tier values so we can detect upgrades via state diff
+    this._prevTiers = { p1: 0, p2: 0 };
+
+    this._wsStateHandler = (s) => {
+      if (s?.phase === "mode_select") {
+        this.gameState = s;
+        this._returnToIntro(s);
+        return;
+      }
+
+>>>>>>> Stashed changes
       const prevSide = this._lastActiveSide;
       const newSide  = s.battle?.active_side ?? null;
 
@@ -1257,9 +1784,10 @@ export class GameScene extends Phaser.Scene {
       }
 
       this._lastActiveSide = newSide;
-    });
+    };
+    this.ws.on("state", this._wsStateHandler);
 
-    this.ws.on("events", (events) => {
+    this._wsEventsHandler = (events) => {
       const nukeCells = events
         .filter((ev) => ev?.nuke && Array.isArray(ev.cell))
         .map((ev) => ev.cell);
@@ -1314,7 +1842,8 @@ export class GameScene extends Phaser.Scene {
             break;
         }
       }
-    });
+    };
+    this.ws.on("events", this._wsEventsHandler);
   }
 
   // ─── Ray animation ───────────────────────────────────────────────────────────

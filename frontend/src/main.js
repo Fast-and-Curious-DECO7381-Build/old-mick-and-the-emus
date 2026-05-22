@@ -12,7 +12,7 @@ const game = new Phaser.Game({
   type:            Phaser.AUTO,
   width:           CANVAS_W,
   height:          CANVAS_H,
-  backgroundColor: "#0f0c08",
+  transparent:      true,
   parent:          "game-canvas",
   scene:           [BootScene, GameScene],
   scale: {

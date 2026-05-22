@@ -53,7 +53,20 @@ function countProtectedResources(side, def, state, defTier) {
 
 function onState(s) {
   if (!s) return;
+<<<<<<< Updated upstream
   _updateModeOverlay(s);
+=======
+  if (s.phase === "mode_select") {
+    clearTimeout(_resultTimer);
+    _resultTimer = null;
+    _resultTimerActive = false;
+  }
+  if (document.body.classList.contains("intro-stage")) {
+    _setHelpVisible(!!s.help_visible);
+    _updateStatus(s, s.battle?.active_side ?? null, s.game || {});
+    return;
+  }
+>>>>>>> Stashed changes
   _setHelpVisible(!!s.help_visible);
   const p1         = s.p1      || {};
   const p2         = s.p2      || {};
@@ -239,6 +252,11 @@ function _updateStatus(state, activeSide, game) {
   bar.className = activeSide === "p1" ? "notif-bar turn-p1"
                 : activeSide === "p2" ? "notif-bar turn-p2"
                 : "notif-bar";
+
+  if (state?.phase === "mode_select") {
+    textEl.textContent = "Choose START GAME or TUTORIAL to begin.";
+    return;
+  }
 
   const setupMessage = state?.setup?.status_message;
   if (setupMessage && state?.phase !== "game") {

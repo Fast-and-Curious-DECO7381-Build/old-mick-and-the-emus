@@ -81,6 +81,7 @@ export class IntroScene extends Phaser.Scene {
   constructor() { super("Intro"); }
 
   init(data) {
+<<<<<<< Updated upstream
     this.ws           = data.ws;
     this._slideIndex  = 0;
     this._slideObjs   = [];
@@ -104,6 +105,52 @@ export class IntroScene extends Phaser.Scene {
       if (this.sound.locked) this.sound.unlock();
       playBgm(this, "bgm_outback");
     };
+=======
+    this.ws                 = data.ws;
+    this._slideObjs         = [];
+    /** @type {IntroPhase} */
+    this._introPhase        = "start";
+    this._inStartScreen     = false;
+    this._inVideo           = false;
+    this._startChoiceLocked = false;
+    this._htmlVideo         = null;
+    this._videoHostClick    = null;
+    this._onVideoEnded      = null;
+    this._onVideoError      = null;
+    this._onVideoMetadata   = null;
+    this._latestState       = null;
+    this._audioStarted      = false;
+    this._videoHint         = null;
+    this._chosenMode        = null;
+    this._cleanedUp         = false;
+  }
+
+  _cleanupScene() {
+    if (this._cleanedUp) return;
+    this._cleanedUp = true;
+    this._teardownStoryVideo();
+    this._setIntroStage(false);
+    if (this.ws && this._stateHandler) {
+      this.ws.off("state", this._stateHandler);
+      this._stateHandler = null;
+    }
+    if (this._pointerAdvanceHandler) {
+      this.input.off("pointerdown", this._pointerAdvanceHandler);
+      this._pointerAdvanceHandler = null;
+    }
+    if (this._keyAdvanceHandler) {
+      this.input.keyboard.off("keydown", this._keyAdvanceHandler);
+      this._keyAdvanceHandler = null;
+    }
+  }
+
+  create() {
+    this._introPhase = "start";
+    this._cleanedUp = false;
+    this._setIntroStage(true);
+    this.events.once("shutdown", this._cleanupScene, this);
+    this.events.once("destroy", this._cleanupScene, this);
+>>>>>>> Stashed changes
 
     this._pointerAdvanceHandler = () => {
       startAudio();
@@ -171,6 +218,7 @@ export class IntroScene extends Phaser.Scene {
     this._clearSlide();
     const objs = [];
 
+<<<<<<< Updated upstream
     // Slide counter dots
     const dotY = 42;
     SLIDES.forEach((_, i) => {
@@ -194,6 +242,28 @@ export class IntroScene extends Phaser.Scene {
       }).setOrigin(0.5).setAlpha(0);
       objs.push(placeText);
       this.tweens.add({ targets: placeText, alpha: 1, delay: 600, duration: 800 });
+=======
+
+    if (this.textures.exists(INTRO_TITLE_KEY)) {
+      const img = this.add.image(CX, titleY, INTRO_TITLE_KEY);
+      const maxW = W * 0.90;
+      const maxH = H * 0.42;
+      img.setScale(Math.min(maxW / img.width, maxH / img.height, 1));
+      objs.push(img);
+    } else {
+      objs.push(this.add.text(CX, titleY - 16, "Old Mick and the Emus", {
+        fontFamily: "'Press Start 2P', monospace",
+        fontSize: "13px",
+        color: "#d4a030",
+        align: "center",
+      }).setOrigin(0.5));
+      objs.push(this.add.text(CX, titleY + 22, "Put Picture here", {
+        fontFamily: "serif",
+        fontSize: "15px",
+        color: "#6a6a6a",
+        align: "center",
+      }).setOrigin(0.5));
+>>>>>>> Stashed changes
     }
 
     const sep = this.add.graphics().setAlpha(0);
@@ -541,10 +611,16 @@ export class IntroScene extends Phaser.Scene {
   }
 
   _goToGame(initialState) {
+<<<<<<< Updated upstream
     if (this.ws && this._stateHandler) {
       this.ws.off("state", this._stateHandler);
       this._stateHandler = null;
     }
+=======
+    if (this._introPhase === "done") return;
+    this._introPhase = "done";
+    this._cleanupScene();
+>>>>>>> Stashed changes
     this.cameras.main.fadeOut(400, 10, 8, 4);
     this.cameras.main.once("camerafadeoutcomplete", () => {
       this.scene.start("Game", { ws: this.ws, initialState });

@@ -300,6 +300,12 @@ class Session:
         self.selected_mode: str | None = None
         self.reset()
 
+    def _mode_select_setup_payload(self) -> dict:
+        payload = self.setup.public_payload()
+        payload["status_code"] = "mode_select"
+        payload["status_message"] = "Choose START GAME or TUTORIAL to begin."
+        return payload
+
     def reset(self) -> None:
         self.seed = int(time.time() * 1000) % (2**31)
         self.terrain = terrain_gen.generate(seed=self.seed)
@@ -314,6 +320,13 @@ class Session:
         self.setup.reset(board_scan_ready=True)
         mode_tag = f" mode={self.selected_mode}" if self.selected_mode else ""
         print(f"[MAP] New game (seed={self.seed}{mode_tag})")
+
+    def return_to_mode_select(self) -> None:
+        self.selected_mode = None
+        self.tutorial_ctrl = None
+        self.tutorial_state = None
+        self.reset()
+        print("[MODE] Returned to mode select")
 
     def select_mode(self, mode: str) -> bool:
         if self.selected_mode is not None or mode not in {MODE_NORMAL, MODE_TUTORIAL}:
@@ -375,6 +388,28 @@ class Session:
                 print(f"[{source}] Mode already locked: {self.selected_mode}")
             return events, errors
 
+<<<<<<< Updated upstream
+=======
+        if action_name == "return_to_mode_select":
+            self.return_to_mode_select()
+            return events, errors
+
+        if action_name == "tutorial_dismiss":
+            if self.tutorial_ctrl is not None:
+                self.tutorial_ctrl.dismiss()
+                if self.tutorial_ctrl.finished:
+                    self._finish_tutorial_mode()
+                elif self.tutorial_ctrl is not None:
+                    self.tutorial_state = self.tutorial_ctrl.snapshot()
+            return events, errors
+
+        if action_name == "tutorial_undo":
+            if self.tutorial_ctrl is not None:
+                self.tutorial_ctrl.undo()
+                self.tutorial_state = self.tutorial_ctrl.snapshot()
+            return events, errors
+
+>>>>>>> Stashed changes
         if command_type == "tier":
             if self.model is None:
                 print(f"[{source}] Ignored tier change until the game starts")
@@ -526,7 +561,7 @@ class Session:
             "map_seed": self.seed,
             "game": self.model.snapshot() if self.model is not None else {},
             "events": events,
-            "setup": self.setup.public_payload(),
+            "setup": self._mode_select_setup_payload() if self.selected_mode is None else self.setup.public_payload(),
             "battle": self._battle_payload(),
             "help_visible": self.help_visible,
             "errors": dedupe_errors(errors),

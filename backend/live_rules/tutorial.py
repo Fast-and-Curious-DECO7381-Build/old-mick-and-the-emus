@@ -9,8 +9,13 @@ TUTORIAL_SEED = 42
 STEPS = [
     {
         "id": "intro",
+<<<<<<< Updated upstream
         "title": "Welcome to Old Mick Against the Mob",
         "text": "In 1932, emus invaded Australian farmland. You are Old Mick, defending your homestead.",
+=======
+        "title": "Welcome to Old Mick vs the Emus",
+        "text": "In 1932, emus invaded the outback.\nYou are Old Mick.\nDefend your homestead.",
+>>>>>>> Stashed changes
         "condition": "dismiss",
     },
     {
@@ -29,9 +34,48 @@ STEPS = [
     {
         "id": "explain_sides_alternate",
         "title": "Who Owns Which Side?",
+<<<<<<< Updated upstream
         "text": "The board is split by a diagonal fence.\nOld Mick (Player 1) controls the bottom-left territory (orange highlight).\nThe Mob (Player 2) controls the top-right territory (green highlight).\nWatch the highlights alternate—you must keep your tokens on your side.",
         "condition": "dismiss",
         "highlight_alternate_sides": True,
+=======
+        "text": "A diagonal fence splits the board.\nOld Mick: top-left farmlands.\nThe Emus: bottom-right scrublands.",
+        "condition": "dismiss",
+        "highlight_side": "p1",
+    },
+    {
+        "id": "explain_win",
+        "title": "How to Win",
+        "text": "Destroy the enemy HQ, or wipe out their resources.\nProtect your own HQ.",
+        "condition": "dismiss",
+        "tutorial_layout": "with_pic",
+        "tutorial_image": "assets/images/tiles/cell-e-nest.png",
+    },
+    {
+        "id": "explain_turn_markers",
+        "title": "Turn Control",
+        "text": "Scan markers to set whose turn it is.\nOld Mick marker → your turn.\nEmu marker → their turn.",
+        "condition": "dismiss",
+        "tutorial_layout": "gif",
+        "tutorial_gif": "assets/gif/End_turn_explain.gif",
+    },
+    {
+        "id": "explain_confirm_marker",
+        "title": "Confirm Marker",
+        "text": "Scan the confirm marker to lock choices. Use it to finish HQ setup or end your turn.",
+        "condition": "dismiss",
+        "tutorial_layout": "gif",
+        "tutorial_gif": "assets/gif/p1_to_confirm.gif",
+    },
+    {
+        "id": "set_turn_p1",
+        "title": "Set Old Mick's Turn",
+        "text": "Set the turn marker to Old Mick's side.",
+        "condition": "turn_change",
+        "wait_turn": 1,
+        "tutorial_layout": "gif",
+        "tutorial_gif": "assets/gif/confirm_to_p1.gif",
+>>>>>>> Stashed changes
     },
     {
         "id": "explain_hq",
@@ -45,11 +89,30 @@ STEPS = [
         "text": "Place your HQ marker (hq_mick) on cell B3 in your territory.\nKeep your HQ location secret from your opponent!",
         "highlight": {"col": 1, "row": 2},
         "condition": "dismiss",
+<<<<<<< Updated upstream
     },
     {
         "id": "explain_turn_marker",
         "title": "The Turn Marker",
         "text": "Turn is driven by which markers the camera sees:\n• Marker #10 scanned → Player 1's turn (Old Mick).\n• Marker #20 scanned → Player 2's turn (The Mob).\n• Marker #4 scanned → the active player ends their turn.",
+=======
+        "tutorial_layout": "with_pic",
+        "tutorial_image": "assets/images/tokens/hq-mick.png",
+    },
+    {
+        "id": "hq_confirm_scan",
+        "title": "Confirm HQ Placement",
+        "text": "Slide to the confirm marker.\nScan confirm to finish HQ placement.",
+        "highlight": {"col": 1, "row": 9},
+        "condition": "confirm_present",
+        "tutorial_layout": "gif",
+        "tutorial_gif": "assets/gif/p1_to_confirm.gif",
+    },
+    {
+        "id": "notify_tutorial_skip",
+        "title": "Tutorial Pace",
+        "text": "Token placement and the Emus' turn are skipped in this tutorial.",
+>>>>>>> Stashed changes
         "condition": "dismiss",
     },
     {
@@ -68,15 +131,30 @@ STEPS = [
     },
     {
         "id": "aim_atk_a",
+<<<<<<< Updated upstream
         "title": "Aim Your Attack",
         "text": "Rotate Keith A to face EAST (right) toward enemy territory.\nThe attack ray will fire in this direction.",
         "highlight": {"col": 3, "row": 3},
         "condition": "dismiss",
         "tutorial_gif": "assets/gif/aim_atk_a.gif",
+=======
+        "title": "Aim Rifleman A",
+        "text": "Move Rifleman A to cell D5.\nPoint the marker toward south.",
+        "highlight": {"col": 3, "row": 4},
+        "condition": {
+            "token": "p1.atk_a",
+            "col": 3,
+            "row": 4,
+            "direction": "S",
+        },
+        "tutorial_layout": "gif",
+        "tutorial_gif": "assets/gif/attacker_rotation_rotate.gif",
+>>>>>>> Stashed changes
     },
     {
         "id": "explain_ray",
         "title": "Attack Rays",
+<<<<<<< Updated upstream
         "text": "The green line shows your attack ray. It will hit the first enemy resource cell in its path.",
         "condition": "dismiss",
     },
@@ -92,6 +170,9 @@ STEPS = [
         "title": "Aim Second Attacker",
         "text": "Rotate Keith B to face SOUTH-EAST toward enemy territory.",
         "highlight": {"col": 2, "row": 5},
+=======
+        "text": "The red line is your attack ray.\nIt stops at the first enemy resource.",
+>>>>>>> Stashed changes
         "condition": "dismiss",
     },
     {
@@ -127,9 +208,32 @@ STEPS = [
         "condition": "dismiss",
     },
     {
+<<<<<<< Updated upstream
         "id": "explain_win",
         "title": "How to Win",
         "text": "Win by destroying the enemy's hidden HQ, or by destroying all 24 enemy resource cells.\nProtect your own HQ at all costs!",
+=======
+        "id": "explain_nuke",
+        "title": "The Nuke",
+        "text": "At eight or fewer cells left, Nuke unlocks.\nPlace your nuke marker on cell K10.",
+        "highlight": {"col": 10, "row": 9},
+        "condition": {
+            "token": "p1.nuke",
+            "col": 10,
+            "row": 9,
+        },
+        "tutorial_layout": "with_pic",
+        "tutorial_images": [
+            "assets/images/tokens/wild-token-m-keith.png",
+            "assets/images/tokens/wild-token-e-dino.png",
+        ],
+        "runner_effect": "p1_nuke_unlock",
+    },
+    {
+        "id": "explain_help_guide",
+        "title": "Help Guide Marker",
+        "text": "During a game, scan the help guide marker anytime.",
+>>>>>>> Stashed changes
         "condition": "dismiss",
     },
     {
