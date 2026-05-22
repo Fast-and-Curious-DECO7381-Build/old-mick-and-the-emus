@@ -302,6 +302,12 @@ class Session:
         self.tutorial_state: dict | None = None
         self.reset()
 
+    def _mode_select_setup_payload(self) -> dict:
+        payload = self.setup.public_payload()
+        payload["status_code"] = "mode_select"
+        payload["status_message"] = "Choose START GAME or TUTORIAL to begin."
+        return payload
+
     def reset(self) -> None:
         if self.selected_mode == MODE_TUTORIAL:
             self.seed = tutorial.TUTORIAL_SEED
@@ -322,6 +328,13 @@ class Session:
         self.setup.reset(board_scan_ready=True)
         mode_tag = f" mode={self.selected_mode}" if self.selected_mode else ""
         print(f"[MAP] New game (seed={self.seed}{mode_tag})")
+
+    def return_to_mode_select(self) -> None:
+        self.selected_mode = None
+        self.tutorial_ctrl = None
+        self.tutorial_state = None
+        self.reset()
+        print("[MODE] Returned to mode select")
 
     def select_mode(self, mode: str) -> bool:
         if self.selected_mode is not None or mode not in {MODE_NORMAL, MODE_TUTORIAL}:
@@ -405,6 +418,10 @@ class Session:
                 print(f"[{source}] Invalid mode selection")
             else:
                 print(f"[{source}] Mode already locked: {self.selected_mode}")
+            return events, errors
+
+        if action_name == "return_to_mode_select":
+            self.return_to_mode_select()
             return events, errors
 
         if action_name == "tutorial_dismiss":
@@ -653,7 +670,7 @@ class Session:
             "map_seed": self.seed,
             "game": self.model.snapshot() if self.model is not None else {},
             "events": events,
-            "setup": self.setup.public_payload(),
+            "setup": self._mode_select_setup_payload() if self.selected_mode is None else self.setup.public_payload(),
             "battle": self._battle_payload(),
             "help_visible": self.help_visible,
             "errors": dedupe_errors(errors),

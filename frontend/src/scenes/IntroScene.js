@@ -31,20 +31,34 @@ export class IntroScene extends Phaser.Scene {
     this._audioStarted      = false;
     this._videoHint         = null;
     this._chosenMode        = null;
+    this._cleanedUp         = false;
   }
 
-  shutdown() {
+  _cleanupScene() {
+    if (this._cleanedUp) return;
+    this._cleanedUp = true;
     this._teardownStoryVideo();
     this._setIntroStage(false);
     if (this.ws && this._stateHandler) {
       this.ws.off("state", this._stateHandler);
       this._stateHandler = null;
     }
+    if (this._pointerAdvanceHandler) {
+      this.input.off("pointerdown", this._pointerAdvanceHandler);
+      this._pointerAdvanceHandler = null;
+    }
+    if (this._keyAdvanceHandler) {
+      this.input.keyboard.off("keydown", this._keyAdvanceHandler);
+      this._keyAdvanceHandler = null;
+    }
   }
 
   create() {
     this._introPhase = "start";
+    this._cleanedUp = false;
     this._setIntroStage(true);
+    this.events.once("shutdown", this._cleanupScene, this);
+    this.events.once("destroy", this._cleanupScene, this);
 
     this._pointerAdvanceHandler = () => {
       this._startAudio();
@@ -348,12 +362,7 @@ export class IntroScene extends Phaser.Scene {
   _goToGame(initialState) {
     if (this._introPhase === "done") return;
     this._introPhase = "done";
-    this._teardownStoryVideo();
-    this._setIntroStage(false);
-    if (this.ws && this._stateHandler) {
-      this.ws.off("state", this._stateHandler);
-      this._stateHandler = null;
-    }
+    this._cleanupScene();
     this.cameras.main.fadeOut(400, 10, 8, 4);
     this.cameras.main.once("camerafadeoutcomplete", () => {
       this.scene.start("Game", { ws: this.ws, initialState });

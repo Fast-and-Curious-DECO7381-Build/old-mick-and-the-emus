@@ -129,9 +129,22 @@ export class GameScene extends Phaser.Scene {
     this._pickerData      = null; // {container, col, row, side} when picker is open
     this._lastActiveSide  = null; // track turn changes
     this._bgmStarted      = false; // ensure BGM only starts once
+    this._returningToIntro = false;
+    this._cleanedUp        = false;
+    this._wsStateHandler   = null;
+    this._wsEventsHandler  = null;
+    this._resizeHandler    = null;
+    this._demoNextHandler  = null;
+    this._spaceKeyHandler  = null;
+    this._undoKeyHandler   = null;
+    this._nukeArmHandler   = null;
   }
 
   create() {
+    this._cleanedUp = false;
+    this._returningToIntro = false;
+    this.events.once("shutdown", this._cleanupScene, this);
+    this.events.once("destroy", this._cleanupScene, this);
     this.cameras.main.setBackgroundColor("#0f0c08");
     this.boardGfx    = this.add.graphics().setDepth(0);
     this.resourceGfx = this.add.graphics().setDepth(1);
@@ -151,7 +164,8 @@ export class GameScene extends Phaser.Scene {
 
     this.input.on("pointerdown", this._handleBoardClick, this);
 
-    this.input.keyboard.on("keydown-N", () => this.ws?.send("demo_next", {}));
+    this._demoNextHandler = () => this.ws?.send("demo_next", {});
+    this.input.keyboard.on("keydown-N", this._demoNextHandler);
 
     // BGM is started on first board click (see _handleBoardClick).
     // Browsers block audio until a user gesture — starting it here would be
@@ -159,13 +173,14 @@ export class GameScene extends Phaser.Scene {
 
     this.time.addEvent({ delay: 33, loop: true, callback: () => this._render() });
 
-    this.scale.on("resize", () => {
+    this._resizeHandler = () => {
       if (this._tutGifDom?.visible) this._syncTutorialGifDomPosition();
       if (this._tutPicDom?.visible) this._syncTutorialPicDomPosition();
-    });
+    };
+    this.scale.on("resize", this._resizeHandler);
 
     // ── Nuke bridge: HTML card click → Phaser ────────────────────────────────
-    window._nukeArm = (side) => {
+    this._nukeArmHandler = (side) => {
       const s = this.gameState;
       if (!s || s.phase !== "game") return;
       const activeSide = s.battle?.active_side;
@@ -176,6 +191,50 @@ export class GameScene extends Phaser.Scene {
       // Brief visual feedback: flash the board border
       this.cameras.main.flash(200, 255, 140, 0, false);
     };
+    window._nukeArm = this._nukeArmHandler;
+  }
+
+  _cleanupScene() {
+    if (this._cleanedUp) return;
+    this._cleanedUp = true;
+
+    this.input.off("pointerdown", this._handleBoardClick, this);
+    if (this._demoNextHandler) {
+      this.input.keyboard.off("keydown-N", this._demoNextHandler);
+      this._demoNextHandler = null;
+    }
+    if (this._spaceKeyHandler) {
+      this.input.keyboard.off("keydown-SPACE", this._spaceKeyHandler);
+      this._spaceKeyHandler = null;
+    }
+    if (this._undoKeyHandler) {
+      this.input.keyboard.off("keydown-W", this._undoKeyHandler);
+      this._undoKeyHandler = null;
+    }
+    if (this._resizeHandler) {
+      this.scale.off("resize", this._resizeHandler);
+      this._resizeHandler = null;
+    }
+    if (this.ws && this._wsStateHandler) {
+      this.ws.off("state", this._wsStateHandler);
+      this._wsStateHandler = null;
+    }
+    if (this.ws && this._wsEventsHandler) {
+      this.ws.off("events", this._wsEventsHandler);
+      this._wsEventsHandler = null;
+    }
+    if (window._nukeArm === this._nukeArmHandler) {
+      window._nukeArm = null;
+    }
+    this._nukeArmHandler = null;
+    this._hideTokenPicker();
+  }
+
+  _returnToIntro(state) {
+    if (this._returningToIntro) return;
+    this._returningToIntro = true;
+    this._cleanupScene();
+    this.scene.start("Intro", { ws: this.ws, initialState: state, replay: true });
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -283,7 +342,7 @@ export class GameScene extends Phaser.Scene {
 
     this.winContainer = this.add.container(cx, cy).setDepth(40).setVisible(false);
 
-    const bg = this.add.rectangle(0, 0, 560, 160, 0x080502, 0.96)
+    const bg = this.add.rectangle(0, 0, 560, 210, 0x080502, 0.96)
       .setStrokeStyle(2, 0xd4a030, 1);
 
     this._winTitleTxt = this.add.text(0, -42, "", {
@@ -291,20 +350,38 @@ export class GameScene extends Phaser.Scene {
       color: "#ffe070", stroke: "#3a2010", strokeThickness: 4,
     }).setOrigin(0.5);
 
-    this._winSubTxt = this.add.text(0, 8, "", {
+    this._winSubTxt = this.add.text(0, -2, "", {
       fontFamily: FONT_LABEL, fontSize: "15px",
       color: "#f0c080", align: "center", wordWrap: { width: 500 },
     }).setOrigin(0.5);
 
-    this._winHintTxt = this.add.text(0, 54, "Press N to advance demo", {
+    this._winHintTxt = this.add.text(0, 52, "Choose a mode to start again.", {
       fontFamily: FONT_MONO, fontSize: "10px", color: "#6a5030",
     }).setOrigin(0.5);
+
+    this._playAgainBtn = this.add.container(0, 82).setSize(220, 34).setVisible(false);
+    this._playAgainBtnBg = this.add.rectangle(0, 0, 220, 34, 0x1a1208)
+      .setStrokeStyle(2, 0xd4a030, 1)
+      .setInteractive({ useHandCursor: true });
+    this._playAgainBtnTxt = this.add.text(0, 0, "PLAY AGAIN", {
+      fontFamily: "'Press Start 2P'",
+      fontSize: "9px",
+      color: "#f0e060",
+    }).setOrigin(0.5);
+    this._playAgainBtnBg.on("pointerover", () => this._playAgainBtnBg.setFillStyle(0x2e2010));
+    this._playAgainBtnBg.on("pointerout", () => this._playAgainBtnBg.setFillStyle(0x1a1208));
+    this._playAgainBtnBg.on("pointerdown", (_pointer, _localX, _localY, event) => {
+      event?.stopPropagation?.();
+      playSfx(this, "sfx_select");
+      this.ws?.send("return_to_mode_select", {});
+    });
+    this._playAgainBtn.add([this._playAgainBtnBg, this._playAgainBtnTxt]);
 
     this._winHqLeft  = this.add.image(-220, 0, "hq_grain_stash").setDisplaySize(80, 80).setDepth(41);
     this._winHqRight = this.add.image( 220, 0, "hq_bird_council" ).setDisplaySize(80, 80).setDepth(41);
 
     this.winContainer.add([bg, this._winTitleTxt, this._winSubTxt, this._winHintTxt,
-                           this._winHqLeft, this._winHqRight]);
+                           this._winHqLeft, this._winHqRight, this._playAgainBtn]);
   }
 
   _buildTutorialOverlay() {
@@ -402,17 +479,19 @@ export class GameScene extends Phaser.Scene {
       if (tut?.active && this._tutorialCanSpaceContinue(tut)) this._sendTutorialDismiss();
     });
 
-    this.input.keyboard.on("keydown-SPACE", () => {
+    this._spaceKeyHandler = () => {
       const tut = this.gameState?.tutorial;
       if (tut?.active && this._tutorialCanSpaceContinue(tut)) this._sendTutorialDismiss();
-    });
-    this.input.keyboard.on("keydown-W", () => {
+    };
+    this.input.keyboard.on("keydown-SPACE", this._spaceKeyHandler);
+    this._undoKeyHandler = () => {
       const tut = this.gameState?.tutorial;
       if (tut?.active && tut?.can_undo) {
         this.ws?.send("tutorial_undo", {});
         playSfx(this, "sfx_select");
       }
-    });
+    };
+    this.input.keyboard.on("keydown-W", this._undoKeyHandler);
 
     this._applyTutorialLayout("text");
   }
@@ -1403,6 +1482,7 @@ export class GameScene extends Phaser.Scene {
     if (!G.winner) {
       this.winContainer.setVisible(false);
       this._winDimRect.setVisible(false);
+      this._playAgainBtn?.setVisible(false);
       return;
     }
 
@@ -1416,6 +1496,7 @@ export class GameScene extends Phaser.Scene {
     const [title, sub] = msgs[G.win_reason] ?? [`${G.winner?.toUpperCase()} WINS`, ""];
     this._winTitleTxt.setText(title);
     this._winSubTxt.setText(sub);
+    this._playAgainBtn?.setVisible(true);
 
     const loser      = G.win_reason === "homestead_destroyed" ? "p1" : "p2";
     const winnerSide = loser === "p1" ? "p2" : "p1";
@@ -1623,7 +1704,13 @@ export class GameScene extends Phaser.Scene {
     // Track previous tier values so we can detect upgrades via state diff
     this._prevTiers = { p1: 0, p2: 0 };
 
-    this.ws.on("state", (s) => {
+    this._wsStateHandler = (s) => {
+      if (s?.phase === "mode_select") {
+        this.gameState = s;
+        this._returnToIntro(s);
+        return;
+      }
+
       const prevSide = this._lastActiveSide;
       const newSide  = s.battle?.active_side ?? null;
 
@@ -1646,9 +1733,10 @@ export class GameScene extends Phaser.Scene {
       }
 
       this._lastActiveSide = newSide;
-    });
+    };
+    this.ws.on("state", this._wsStateHandler);
 
-    this.ws.on("events", (events) => {
+    this._wsEventsHandler = (events) => {
       const nukeCells = events
         .filter((ev) => ev?.nuke && Array.isArray(ev.cell))
         .map((ev) => ev.cell);
@@ -1703,7 +1791,8 @@ export class GameScene extends Phaser.Scene {
             break;
         }
       }
-    });
+    };
+    this.ws.on("events", this._wsEventsHandler);
   }
 
   // ─── Ray animation ───────────────────────────────────────────────────────────
