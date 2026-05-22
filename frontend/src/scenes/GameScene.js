@@ -336,30 +336,49 @@ export class GameScene extends Phaser.Scene {
   _buildWinOverlay() {
     const cx = CANVAS_W / 2;
     const cy = CANVAS_H / 2;
+    const panelW = 620;
+    const panelH = 290;
+
+    this._winLayout = {
+      panelW,
+      panelH,
+      titleY: -102,
+      subY: -58,
+      subWrapW: 340,
+      hqX: 228,
+      hqY: 56,
+      hqSize: 76,
+      hintY: 82,
+      hintGap: 18,
+      buttonY: 118,
+      buttonGap: 18,
+      buttonH: 34,
+      bottomPad: 24,
+    };
 
     this._winDimRect = this.add.rectangle(cx, cy, BOARD_PX, BOARD_PX, 0x000000, 0)
       .setDepth(39).setVisible(false);
 
     this.winContainer = this.add.container(cx, cy).setDepth(40).setVisible(false);
 
-    const bg = this.add.rectangle(0, 0, 560, 210, 0x080502, 0.96)
+    const bg = this.add.rectangle(0, 0, panelW, panelH, 0x080502, 0.96)
       .setStrokeStyle(2, 0xd4a030, 1);
 
-    this._winTitleTxt = this.add.text(0, -42, "", {
+    this._winTitleTxt = this.add.text(0, this._winLayout.titleY, "", {
       fontFamily: FONT_TITLE, fontSize: "36px", fontStyle: "bold",
       color: "#ffe070", stroke: "#3a2010", strokeThickness: 4,
     }).setOrigin(0.5);
 
-    this._winSubTxt = this.add.text(0, -2, "", {
+    this._winSubTxt = this.add.text(0, this._winLayout.subY, "", {
       fontFamily: FONT_LABEL, fontSize: "15px",
-      color: "#f0c080", align: "center", wordWrap: { width: 500 },
-    }).setOrigin(0.5);
+      color: "#f0c080", align: "center", wordWrap: { width: this._winLayout.subWrapW },
+    }).setOrigin(0.5, 0);
 
-    this._winHintTxt = this.add.text(0, 52, "Choose a mode to start again.", {
+    this._winHintTxt = this.add.text(0, this._winLayout.hintY, "Choose a mode to start again.", {
       fontFamily: FONT_MONO, fontSize: "10px", color: "#6a5030",
     }).setOrigin(0.5);
 
-    this._playAgainBtn = this.add.container(0, 82).setSize(220, 34).setVisible(false);
+    this._playAgainBtn = this.add.container(0, this._winLayout.buttonY).setSize(220, 34).setVisible(false);
     this._playAgainBtnBg = this.add.rectangle(0, 0, 220, 34, 0x1a1208)
       .setStrokeStyle(2, 0xd4a030, 1)
       .setInteractive({ useHandCursor: true });
@@ -377,8 +396,12 @@ export class GameScene extends Phaser.Scene {
     });
     this._playAgainBtn.add([this._playAgainBtnBg, this._playAgainBtnTxt]);
 
-    this._winHqLeft  = this.add.image(-220, 0, "hq_grain_stash").setDisplaySize(80, 80).setDepth(41);
-    this._winHqRight = this.add.image( 220, 0, "hq_bird_council" ).setDisplaySize(80, 80).setDepth(41);
+    this._winHqLeft  = this.add.image(-this._winLayout.hqX, this._winLayout.hqY, "hq_grain_stash")
+      .setDisplaySize(this._winLayout.hqSize, this._winLayout.hqSize)
+      .setDepth(41);
+    this._winHqRight = this.add.image( this._winLayout.hqX, this._winLayout.hqY, "hq_bird_council")
+      .setDisplaySize(this._winLayout.hqSize, this._winLayout.hqSize)
+      .setDepth(41);
 
     this.winContainer.add([bg, this._winTitleTxt, this._winSubTxt, this._winHintTxt,
                            this._winHqLeft, this._winHqRight, this._playAgainBtn]);
@@ -1496,6 +1519,17 @@ export class GameScene extends Phaser.Scene {
     const [title, sub] = msgs[G.win_reason] ?? [`${G.winner?.toUpperCase()} WINS`, ""];
     this._winTitleTxt.setText(title);
     this._winSubTxt.setText(sub);
+    const layout = this._winLayout;
+    const subBottom = this._winSubTxt.y + this._winSubTxt.height;
+    const minHintY = subBottom + layout.hintGap + this._winHintTxt.height / 2;
+    const minButtonY = minHintY + this._winHintTxt.height / 2 + layout.buttonGap + layout.buttonH / 2;
+    const maxButtonY = layout.panelH / 2 - layout.bottomPad - layout.buttonH / 2;
+    const buttonY = Math.min(Math.max(layout.buttonY, minButtonY), maxButtonY);
+    const maxHintY = buttonY - layout.buttonH / 2 - layout.buttonGap - this._winHintTxt.height / 2;
+    const hintY = Math.min(Math.max(layout.hintY, minHintY), maxHintY);
+
+    this._winHintTxt.setY(hintY);
+    this._playAgainBtn.setY(buttonY);
     this._playAgainBtn?.setVisible(true);
 
     const loser      = G.win_reason === "homestead_destroyed" ? "p1" : "p2";
