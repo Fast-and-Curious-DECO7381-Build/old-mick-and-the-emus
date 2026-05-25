@@ -120,7 +120,7 @@ html, body {
 }
 .panel-left .score-number              { color: #80e050; }
 .panel-left .score-number .score-denom { color: #4a9930; }
-.panel-left .score-label               { color: #80e050; }
+.panel-left .score-label               { color: #4a9930; }
 
 .score-bar-track {
   height: 7px;
@@ -135,8 +135,8 @@ html, body {
   border-radius: 2px;
   transition: width 0.5s ease;
 }
-/* Mick's bar — warm gold matching farm terrain */
-.score-bar-p1 { background: #6adf50; }
+/* Mick's bar — muted green matching the denominator */
+.score-bar-p1 { background: #4a9930; }
 /* The Emus' bar — sandy tan matching emu terrain */
 .score-bar-p2 { background: #a07838; }
 
