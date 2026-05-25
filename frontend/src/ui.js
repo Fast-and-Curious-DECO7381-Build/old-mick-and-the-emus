@@ -92,6 +92,10 @@ function onState(s) {
   el("panel-left") ?.classList.toggle("tutorial-highlight", s.tutorial?.highlight_sidebar === "left");
   el("panel-right")?.classList.toggle("tutorial-highlight", s.tutorial?.highlight_sidebar === "right");
 
+  const inGame = s.phase === "game";
+  el("turn-arrow-p1")?.classList.toggle("hidden", !(inGame && activeSide === "p1"));
+  el("turn-arrow-p2")?.classList.toggle("hidden", !(inGame && activeSide === "p2"));
+
   if (!_resultTimerActive) {
     _updateStatus(s, activeSide, game);
   }

@@ -49,6 +49,42 @@ html, body {
   background: #1e1508;
 }
 
+/* ── Generic hidden utility ──────────────────────────────────── */
+.hidden { display: none !important; }
+
+/* ── Turn arrows ──────────────────────────────────────────────── */
+.turn-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Press Start 2P', system-ui;
+  font-size: 48px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 10;
+  image-rendering: pixelated;
+}
+/* Left-pointing (p1 = Old Mick, left panel) */
+.turn-arrow-p1 {
+  left: 4px;
+  color: #6adf50;
+  animation: turn-pulse-p1 1.4s ease-in-out infinite;
+}
+/* Right-pointing (p2 = Emus, right panel) */
+.turn-arrow-p2 {
+  right: 4px;
+  color: #e0b030;
+  animation: turn-pulse-p2 1.4s ease-in-out infinite;
+}
+@keyframes turn-pulse-p1 {
+  0%, 100% { opacity: 0.5; text-shadow: 0 0 4px #6adf50; }
+  50%       { opacity: 1;   text-shadow: 0 0 18px #6adf50, 0 0 6px #6adf50; }
+}
+@keyframes turn-pulse-p2 {
+  0%, 100% { opacity: 0.5; text-shadow: 0 0 4px #e0b030; }
+  50%       { opacity: 1;   text-shadow: 0 0 18px #e0b030, 0 0 6px #e0b030; }
+}
+
 .panel.tutorial-highlight {
   outline: 3px solid #ffd060;
   outline-offset: 2px;
