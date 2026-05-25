@@ -222,6 +222,7 @@ Use `errors` for recoverable validation or tracker issues rather than as a subst
 - HQ coordinates are selected during setup.
 - Confirmed HQ coordinates remain hidden during normal play.
 - `game.hq_revealed` is the public path for HQ coordinates only after gameplay reveals them.
+- When `game.winner` is set, `game.hq_revealed` includes both sides' final HQ cells for post-game settlement UI.
 
 ## Historical Note
 

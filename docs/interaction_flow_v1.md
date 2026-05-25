@@ -4,7 +4,7 @@
 >
 > Parts of this file describe earlier interaction ideas that are no longer the primary implementation path for the current live frontend. Use `docs/setup_flow_backend_v1.md`, `docs/manual_play.md`, `docs/board_state_v1.md`, and `docs/authoritative_actions_v1.md` as the canonical current references.
 
-This document defines the current MVP interaction flow for `Old Mick Against the Mob`.
+This document defines the current MVP interaction flow for `Old Mick and the Emus`.
 
 This is not a visual design spec. It describes how players operate the prototype and how
 the frontend should communicate state and intent.
@@ -30,7 +30,7 @@ Before gameplay begins, the live runtime now requires:
 Required setup sequence:
 
 1. The runtime stays in `scan` until the board markers are readable.
-2. `ID10` or `ID20` decides whether Old Mick or The Mob places an HQ first.
+2. `ID10` or `ID20` decides whether Old Micks or The Emus place an HQ first.
 3. The active setup side places its own HQ marker on its own territory.
 4. The active setup side scans `ID4` to confirm that HQ.
 5. Setup control moves to the other side.
@@ -46,7 +46,7 @@ Current live frontend behavior:
 
 - `frontend/index.html` now renders setup state for `scan`, `side_selection`, and `hq_placement`
 - setup state is shown through the top bar, side panels, board overlays, and warning/help UI
-- the board overlay marks Old Mick territory, Mob territory, and the fence/no-HQ diagonal during setup
+- the board overlay marks Old Micks territory, The Emus territory, and the fence/no-HQ diagonal during setup
 - during `hq_placement`, the active side is chosen by `ID10` / `ID20`
 - during `hq_placement`, `ID11` / `ID21` drive the live HQ candidate cell for the active side
 - during `hq_placement`, the board may show a transient highlight ring for the active HQ marker cell without showing exact coordinates in the side panel

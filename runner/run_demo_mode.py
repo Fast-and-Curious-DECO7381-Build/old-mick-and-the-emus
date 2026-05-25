@@ -114,8 +114,8 @@ class DemoSession:
                 errors=[{"code": "marker_map_scan_failed", "message": "Demo: align all 4 corner markers."}],
             ),
             self._state(phase="hq_placement", active_side=None, hq_markers=hqs, setup_message="Demo: hidden HQ markers are being confirmed."),
-            self._state(phase="game", active_side="p1", p1=p1, p2=p2, hq_markers=hqs, setup_message="Demo: Old Mick is positioning."),
-            self._state(phase="game", active_side="p2", p1=p1, p2=p2, hq_markers=hqs, setup_message="Demo: The Mob is positioning."),
+            self._state(phase="game", active_side="p1", p1=p1, p2=p2, hq_markers=hqs, setup_message="Demo: Old Micks are positioning."),
+            self._state(phase="game", active_side="p2", p1=p1, p2=p2, hq_markers=hqs, setup_message="Demo: The Emus are positioning."),
         ]
 
     def current(self) -> dict:

@@ -1,5 +1,5 @@
 """
-Authoritative game state for Old Mick Against the Mob.
+Authoritative game state for Old Mick and the Emus.
 
 Tracks per-cell damage, hidden HQs, scored resource destruction, tier levels, and
 win conditions. Shot resolution is triggered externally when the live runtime
@@ -532,7 +532,11 @@ class GameModel:
             "nuke_resource_hits": NUKE_RESOURCE_HITS,
             "winner": self.winner,
             "win_reason": self.win_reason,
-            "hq_revealed": {k: list(v) for k, v in self.hq_reveal.items()},
+            "hq_revealed": (
+                {"p1": list(self.hq_p1), "p2": list(self.hq_p2)}
+                if self.winner
+                else {k: list(v) for k, v in self.hq_reveal.items()}
+            ),
         }
 
 

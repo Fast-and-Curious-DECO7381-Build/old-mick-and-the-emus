@@ -40,20 +40,20 @@ The backend is authoritative for all phase transitions.
   - `2` bottom-left
   - `3` bottom-right
 - setup markers:
-  - `10` = `P1 TURN`
-  - `11` = `P1 HQ`
-  - `20` = `P2 TURN`
-  - `21` = `P2 HQ`
+  - `10` = `Old Micks TURN`
+  - `11` = `Old Micks HQ`
+  - `20` = `The Emus TURN`
+  - `21` = `The Emus HQ`
   - `4` = shared `CONFIRM`
 
 ## Marker Roles Used By Gameplay
 
-- `10` = begin `P1` positioning during battle
-- `20` = begin `P2` positioning during battle
-- `12` / `13` / `14` = `P1 ATK A` / `ATK B` / `DEF`
-- `19` = `P1 NUKE`
-- `22` / `23` / `24` = `P2 ATK A` / `ATK B` / `DEF`
-- `29` = `P2 NUKE`
+- `10` = begin `Old Micks` positioning during battle
+- `20` = begin `The Emus` positioning during battle
+- `12` / `13` / `14` = `Old Micks ATK A` / `ATK B` / `DEF`
+- `19` = `Old Micks NUKE`
+- `22` / `23` / `24` = `The Emus ATK A` / `ATK B` / `DEF`
+- `29` = `The Emus NUKE`
 - `4` = shared battle confirm; resolves the active side's turn
 
 ## Hidden HQ Rule

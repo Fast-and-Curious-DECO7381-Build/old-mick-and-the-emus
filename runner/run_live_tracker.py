@@ -81,6 +81,10 @@ NUKE_BY_MARKER_ID = {
     29: "p2",
 }
 
+
+def _side_display_name(side: str) -> str:
+    return "Old Micks" if side == "p1" else "The Emus"
+
 COMPASS_8 = [
     (0, "E"),
     (45, "SE"),
@@ -563,7 +567,7 @@ class Session:
                 "active_side": positioning_side,
                 "waiting_for_side": None,
                 "status_code": "positioning",
-                "status_message": f"{positioning_side.upper()} positioning active. Arrange that side's tokens, then scan ID{confirm_id} to attack.",
+                "status_message": f"{_side_display_name(positioning_side)} positioning active. Arrange that side's tokens, then scan ID{confirm_id} to attack.",
                 "turn_marker_id": marker_id,
                 "confirm_marker_id": confirm_id,
                 "nuke_marker_id": nuke_marker_id,
@@ -573,16 +577,12 @@ class Session:
         waiting_side = self.battle_waiting_for_side
         if waiting_side in PLAYERS:
             marker_id = 10 if waiting_side == "p1" else 20
-            side_name = "Old Mick" if waiting_side == "p1" else "The Mob"
-            if waiting_side == "p1":
-                status_message = "Hide Your HQ. Let P1 scan ID10 to start their turn."
-            else:
-                status_message = f"Hide Your HQ. Let P2 scan ID20 to start their turn."
+            side_name = _side_display_name(waiting_side)
             return {
                 "active_side": None,
                 "waiting_for_side": waiting_side,
                 "status_code": "waiting_for_turn_marker",
-                "status_message": f"Hide your HQ. Scan ID{marker_id} to begin {side_name}'s turn.",
+                "status_message": f"Hide your HQ. Scan ID{marker_id} to begin {side_name}' turn.",
                 "turn_marker_id": marker_id,
                 "confirm_marker_id": 4,
             }
@@ -591,7 +591,7 @@ class Session:
             "active_side": None,
             "waiting_for_side": None,
             "status_code": "waiting_for_first_turn_marker",
-            "status_message": "Scan ID10 or ID20 to begin the first battle turn.",
+            "status_message": "Scan ID10 for Old Micks or ID20 for The Emus to begin the first battle turn.",
             "confirm_marker_id": 4,
         }
 

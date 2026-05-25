@@ -89,7 +89,7 @@ html, body {
 }
 /* Mick's bar — warm gold matching farm terrain */
 .score-bar-p1 { background: #c8a030; }
-/* Mob's bar — sandy tan matching emu terrain */
+/* The Emus' bar — sandy tan matching emu terrain */
 .score-bar-p2 { background: #a07838; }
 
 .score-label {
@@ -131,7 +131,7 @@ html, body {
   background: #7a9e6a;
   border-color: #4a6e3a;
 }
-/* Emu (Mob) cards — sandy terrain background */
+/* The Emus cards — sandy terrain background */
 .card-emu {
   background: #b0926a;
   border-color: #7a6040;

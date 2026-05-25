@@ -1,10 +1,10 @@
-# Old Mick Against the Mob MVP Rules
+# Old Mick and the Emus MVP Rules
 
 > Status: reference document.
 >
 > This file captures earlier MVP rule framing and background context. It is not the canonical description of the current live runtime. For current behavior, use `backend/live_rules/game_model.py`, `docs/board_state_v1.md`, and `docs/authoritative_actions_v1.md`.
 
-This file defines the minimum playable ruleset for the first `Old Mick Against the Mob`
+This file defines the minimum playable ruleset for the first `Old Mick and the Emus`
 prototype. It is intentionally narrower than the full GDD. The goal is to lock the
 core loop before expanding into upgrades, hidden information, and Phaser-specific UI.
 
@@ -37,7 +37,7 @@ Theme mapping:
 - Farmer ATK = `Riflemen`
 - Farmer DEF = `Old Mick`
 - Farmer HQ = `Homestead`
-- Emu ATK = `Mob`
+- Emu ATK = `Emus`
 - Emu DEF = `Cassowary`
 - Emu HQ = `Nest`
 
@@ -46,10 +46,10 @@ must follow the rules below.
 
 Current backend mapping layer:
 
-- internal `Attacker` serializes as themed `Riflemen` for P1 and `Mob` for P2
-- internal `Defender` serializes as themed `Old Mick` for P1 and `Cassowary` for P2
-- internal `CommandTower` maps to `Homestead` for P1 and `Nest` for P2
-- internal `Pixel` maps to `Wheat Paddock` for P1 and `Feeding Ground` for P2
+- internal `Attacker` serializes as themed `Riflemen` for Old Micks and `Emus` for The Emus
+- internal `Defender` serializes as themed `Old Mick` for Old Micks and `Cassowary` for The Emus
+- internal `CommandTower` maps to `Homestead` for Old Micks and `Nest` for The Emus
+- internal `Pixel` maps to `Wheat Paddock` for Old Micks and `Feeding Ground` for The Emus
 
 This keeps the current engine stable while the team replaces the old rules in later steps.
 
@@ -162,7 +162,7 @@ ATK progression:
 Nuke progression:
 
 - When a side has 8 or fewer resource cells remaining, that side's one-use nuke unlocks.
-- P1 triggers nuke with marker `ID19`; P2 triggers nuke with marker `ID29`.
+- Old Micks trigger nuke with marker `ID19`; The Emus trigger nuke with marker `ID29`.
 - The nuke marker only works during that side's active turn and must be placed in enemy territory.
 - A valid marker creates a pending nuke target that is previewed on the frontend with the nuke icon and `3x3` area.
 - The pending nuke resolves when `ID4` confirms the active side's turn.

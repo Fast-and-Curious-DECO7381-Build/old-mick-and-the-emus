@@ -32,6 +32,7 @@ from runner.setup_flow import (
     dedupe_errors,
     new_side_state,
     sanitize_token_states,
+    side_of_cell,
 )
 from live_rules import game_model, terrain_gen, tutorial
 from runner.frontend_static_server import start_frontend_http_server
@@ -119,7 +120,7 @@ def _print_help() -> None:
     print("  help_ui off")
     print("  help_ui toggle")
     print("  choose_side old_mick")
-    print("  choose_side mob")
+    print("  choose_side emus")
     print("  set_hq p1 A3")
     print("  confirm_hq p1")
     print("  reset_setup")
@@ -186,10 +187,10 @@ def _parse_terminal_command(line: str) -> dict | None:
 
     if name == "choose_side":
         if len(parts) != 2:
-            raise ValueError("usage: choose_side old_mick|mob")
+            raise ValueError("usage: choose_side old_mick|emus")
         first_player_side = parts[1].strip().lower()
-        if first_player_side not in {"old_mick", "mob"}:
-            raise ValueError("choose_side expects old_mick or mob")
+        if first_player_side not in {"old_mick", "emus"}:
+            raise ValueError("choose_side expects old_mick or emus")
         return {"action": "choose_side", "first_player_side": first_player_side}
 
     if name == "set_hq":
@@ -325,6 +326,7 @@ class Session:
         self.help_visible = False
         self.model: game_model.GameModel | None = None
         self.pending_events: list[dict] = []
+        self._pending_nuke_cell: dict[str, tuple[int, int] | None] = {side: None for side in PLAYERS}
         self.setup.reset(board_scan_ready=True)
         mode_tag = f" mode={self.selected_mode}" if self.selected_mode else ""
         print(f"[MAP] New game (seed={self.seed}{mode_tag})")
@@ -452,10 +454,10 @@ class Session:
 
             if player == 1:
                 self.model.tier_p1 = max(0, min(4, self.model.tier_p1 + delta))
-                print(f"[{source}] P1 tier -> {self.model.tier_p1}")
+                print(f"[{source}] Old Micks tier -> {self.model.tier_p1}")
             elif player == 2:
                 self.model.tier_p2 = max(0, min(4, self.model.tier_p2 + delta))
-                print(f"[{source}] P2 tier -> {self.model.tier_p2}")
+                print(f"[{source}] The Emus tier -> {self.model.tier_p2}")
             else:
                 print(f"[{source}] Ignored invalid tier player")
             return events, errors
@@ -531,11 +533,23 @@ class Session:
             position = command.get("position") if isinstance(command.get("position"), dict) else None
             active_side = "p1" if self.turn == 1 else "p2"
             if side != active_side or not isinstance(position, dict):
-                print(f"[{source}] Nuke must be triggered by the active side")
+                print(f"[{source}] Nuke must be set by the active side")
                 return events, errors
-            nuke_events = self.model.trigger_nuke(active_side, (position.get("x"), position.get("y")))
-            events.extend(nuke_events)
-            print(f"[{source}] {active_side} nuke -> {_format_cell(position.get('x'), position.get('y'))}")
+            col = position.get("x")
+            row = position.get("y")
+            if not isinstance(col, int) or not isinstance(row, int):
+                print(f"[{source}] Ignored invalid nuke position")
+                return events, errors
+            enemy_side = "p2" if active_side == "p1" else "p1"
+            if side_of_cell(col, row) != enemy_side:
+                print(f"[{source}] Nuke target must be on enemy territory")
+                return events, errors
+            snapshot = self.model.snapshot()
+            if not snapshot.get(f"nuke_available_{active_side}", False):
+                print(f"[{source}] Nuke is not available for {active_side}")
+                return events, errors
+            self._pending_nuke_cell[active_side] = (col, row)
+            print(f"[{source}] {active_side} nuke locked -> {_format_cell(col, row)} (end turn to launch)")
             return events, errors
 
         if action_name == "place_token":
@@ -650,6 +664,13 @@ class Session:
         errors = self._sync_tokens()
         attacker = "p1" if active_turn == 1 else "p2"
         events = self.model.resolve_side_attack(attacker, self.accepted_p1, self.accepted_p2)
+        pending_nuke = self._pending_nuke_cell.get(attacker)
+        if pending_nuke is not None:
+            nuke_events = self.model.trigger_nuke(attacker, pending_nuke)
+            if nuke_events:
+                events.extend(nuke_events)
+                print(f"[{source}] {attacker} nuke launched at {_format_cell(pending_nuke[0], pending_nuke[1])}")
+        self._pending_nuke_cell[attacker] = None
         self.turn = 2 if active_turn == 1 else 1
         self._refresh_tutorial_state(confirm_present=True)
         print(f"[{source}] End turn -> P{self.turn}")
@@ -680,6 +701,19 @@ class Session:
             payload["tutorial"] = self.tutorial_state
         return payload
 
+    def _pending_nuke_payload(self, side: str | None) -> dict | None:
+        if side not in PLAYERS:
+            return None
+        cell = self._pending_nuke_cell.get(side)
+        if cell is None:
+            return None
+        return {
+            "side": side,
+            "col": cell[0],
+            "row": cell[1],
+            "marker_id": 19 if side == "p1" else 29,
+        }
+
     def _battle_payload(self) -> dict:
         if self.setup.phase != PHASE_GAME:
             return {
@@ -698,7 +732,7 @@ class Session:
                 "status_message": "Set the active turn from the terminal to continue.",
             }
 
-        side_name = "Old Mick" if active_side == "p1" else "The Mob"
+        side_name = "Old Micks" if active_side == "p1" else "The Emus"
         status_message = (
             f"{side_name} positioning active. Use terminal or browser controls to arrange that side's tokens and resolve turns."
             if self._manual_controls_enabled()
@@ -711,6 +745,8 @@ class Session:
             "status_message": status_message,
             "turn_marker_id": 10 if active_side == "p1" else 20,
             "confirm_marker_id": 4,
+            "nuke_marker_id": 19 if active_side == "p1" else 29,
+            "pending_nuke": self._pending_nuke_payload(active_side),
         }
 
     def _hq_marker_payload(self) -> dict:

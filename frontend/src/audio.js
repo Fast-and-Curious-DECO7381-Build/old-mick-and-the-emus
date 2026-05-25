@@ -27,6 +27,10 @@ export const AUDIO_MANIFEST = {
   sfx_p1_defense:   ["assets/audio/mick_trigger.mp3"],
   sfx_p2_defense:   ["assets/audio/emu_trigger.mp3"],
 
+  // ── Nuke ──────────────────────────────────────────────────────────────
+  sfx_p1_nuke:      ["assets/audio/mick_nuke.mp3"],
+  sfx_p2_nuke:      ["assets/audio/emu_nuke.mp3"],
+
   // ── Destruction ────────────────────────────────────────────────────────
   sfx_explosion:    ["assets/audio/HQ_destroyed.mp3"],
   sfx_destroy:      ["assets/audio/HQ_destroyed.mp3"],  // cell destroyed (reuse)
@@ -51,6 +55,11 @@ export const AUDIO_MANIFEST = {
 };
 
 // ─── Internal state ───────────────────────────────────────────────────────────
+const SFX_LOCK_ALLOW = new Set(["sfx_p1_nuke", "sfx_p2_nuke"]);
+const BGM_DUCK_MS    = 250;
+const BGM_RESTORE_MS = 400;
+const NUKE_FALLBACK_MS = 3000;
+
 const _state = {
   available: new Set(),  // keys that loaded successfully
   bgmKey:    null,
@@ -58,6 +67,7 @@ const _state = {
   muted:     false,
   bgmVol:    0.40,
   sfxVol:    0.70,
+  sfxLocked: false,
 };
 
 // ─── Loading ──────────────────────────────────────────────────────────────────
@@ -129,22 +139,88 @@ export function playSynth(key) {
 
 // ─── Playback helpers ─────────────────────────────────────────────────────────
 
+/** Stop every playing instance of a loaded SFX key. */
+export function stopSfx(scene, key) {
+  if (!scene?.sound || !_state.available.has(key)) return;
+  scene.sound.stopByKey(key);
+}
+
+/** Duck BGM and block non-priority SFX (e.g. during nuke fanfare). */
+export function beginSfxLock(scene) {
+  if (_state.sfxLocked) return;
+  _state.sfxLocked = true;
+  if (_state.bgmObj && !_state.muted) {
+    scene.tweens.add({
+      targets: _state.bgmObj, volume: 0, duration: BGM_DUCK_MS,
+    });
+  }
+}
+
+/** Restore BGM and allow normal SFX again. */
+export function endSfxLock(scene) {
+  if (!_state.sfxLocked) return;
+  _state.sfxLocked = false;
+  if (_state.bgmObj && !_state.muted) {
+    scene.tweens.add({
+      targets: _state.bgmObj, volume: _state.bgmVol, duration: BGM_RESTORE_MS,
+    });
+  }
+}
+
 /**
  * Play a short one-shot sound.
  * If the file isn't loaded, falls back to the synth table.
- * Returns the Phaser Sound instance (or null for synth / muted).
+ * Returns the Phaser Sound instance (or null for synth / muted / locked).
  */
 export function playSfx(scene, key, opts = {}) {
   if (_state.muted) return null;
+  if (_state.sfxLocked && ! SFX_LOCK_ALLOW.has(key)) return null;
   if (_state.available.has(key)) {
     return scene.sound.play(key, { volume: _state.sfxVol, ...opts });
   }
   // Fallback: synthesized sound (e.g. sfx_marker_turn)
   if (SYNTH_SOUNDS[key]) {
+    if (_state.sfxLocked && ! SFX_LOCK_ALLOW.has(key)) return null;
     playSynth(key);
     return null;
   }
   return null;
+}
+
+/**
+ * Play nuke SFX with priority: duck BGM, block other SFX until complete.
+ * @param {Function} [onComplete] called after lock is released
+ */
+export function playNukeSfx(scene, key, onComplete) {
+  beginSfxLock(scene);
+
+  const finish = () => {
+    endSfxLock(scene);
+    onComplete?.();
+  };
+
+  if (_state.muted || !_state.available.has(key)) {
+    finish();
+    return null;
+  }
+
+  const sound = scene.sound.play(key, { volume: _state.sfxVol });
+  if (!sound) {
+    finish();
+    return null;
+  }
+
+  let done = false;
+  const release = () => {
+    if (done) return;
+    done = true;
+    finish();
+  };
+
+  sound.once("complete", release);
+  const durMs = (sound.duration > 0 ? sound.duration : NUKE_FALLBACK_MS / 1000) * 1000;
+  scene.time.delayedCall(Math.max(durMs, 500) + 100, release);
+  return sound;
 }
 
 /**
@@ -187,6 +263,7 @@ export function stopBgm(scene) {
   _state.bgmKey = null;
   _state.bgmObj = null;
 }
+
 
 // ─── Mute / volume ────────────────────────────────────────────────────────────
 

@@ -68,6 +68,12 @@ export const COLORS = {
   attackRay:       0xcc1010,    // attack ray path — dark red, clearly visible
   attackRayHit:    0xff3300,    // attack ray terminal hit — bright red
 
+  // ── Defence / nuke overlays (match sidebar #40c8ff / deep red zone) ─────────
+  defZoneColor:    0x40c8ff,    // Protecting card glow — both sides on board
+  nukeZoneFill:    0x6b1010,    // pending 3×3 fill
+  nukeZoneStroke:  0xb81818,    // pending 3×3 inner stroke
+  nukeZoneGlow:    0xff3030,    // pending 3×3 outer pulse
+
   // ── Score bars ───────────────────────────────────────────────────────────────
   scoreBarBg:      0x251509,
   scoreBarFill1:   0xd4a030,    // Mick's progress bar

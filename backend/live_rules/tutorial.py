@@ -207,7 +207,7 @@ STEPS = [
     {
         "id": "complete",
         "title": "Tutorial Complete!",
-        "text": "You're ready to play.\nPress SPACE or click to continue.",
+        "text": "You're ready to play.\nUse the button below to return to the start screen.",
         "condition": "dismiss",
         "final": True,
     },

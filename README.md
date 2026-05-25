@@ -146,18 +146,18 @@ This project has two layers that must stay aligned:
 | `3` | Shared | `BOARD CORNER` | Scan, setup, gameplay | Bottom-right calibration corner |
 | `4` | Shared | `CONFIRM` | Setup, gameplay | Confirms HQ setup and submits battle turns |
 | `5` | Shared | `HELP` | Setup, gameplay | Shows the help overlay while visible |
-| `10` | P1 | `TURN` | Setup, gameplay | Opens P1 setup or positioning |
-| `11` | P1 | `HQ` | Setup | Sets P1 HQ candidate |
-| `12` | P1 | `ATK A` | Gameplay | P1 attacker A |
-| `13` | P1 | `ATK B` | Gameplay | P1 attacker B |
-| `14` | P1 | `DEF` | Gameplay | P1 defender |
-| `19` | P1 | `NUKE` | Gameplay | P1 nuke targeting marker |
-| `20` | P2 | `TURN` | Setup, gameplay | Opens P2 setup or positioning |
-| `21` | P2 | `HQ` | Setup | Sets P2 HQ candidate |
-| `22` | P2 | `ATK A` | Gameplay | P2 attacker A |
-| `23` | P2 | `ATK B` | Gameplay | P2 attacker B |
-| `24` | P2 | `DEF` | Gameplay | P2 defender |
-| `29` | P2 | `NUKE` | Gameplay | P2 nuke targeting marker |
+| `10` | Old Micks | `TURN` | Setup, gameplay | Opens Old Micks setup or positioning |
+| `11` | Old Micks | `HQ` | Setup | Sets Old Micks HQ candidate |
+| `12` | Old Micks | `ATK A` | Gameplay | Old Micks attacker A |
+| `13` | Old Micks | `ATK B` | Gameplay | Old Micks attacker B |
+| `14` | Old Micks | `DEF` | Gameplay | Old Micks defender |
+| `19` | Old Micks | `NUKE` | Gameplay | Old Micks nuke targeting marker |
+| `20` | The Emus | `TURN` | Setup, gameplay | Opens The Emus setup or positioning |
+| `21` | The Emus | `HQ` | Setup | Sets The Emus HQ candidate |
+| `22` | The Emus | `ATK A` | Gameplay | The Emus attacker A |
+| `23` | The Emus | `ATK B` | Gameplay | The Emus attacker B |
+| `24` | The Emus | `DEF` | Gameplay | The Emus defender |
+| `29` | The Emus | `NUKE` | Gameplay | The Emus nuke targeting marker |
 
 ### Board Setup Summary
 

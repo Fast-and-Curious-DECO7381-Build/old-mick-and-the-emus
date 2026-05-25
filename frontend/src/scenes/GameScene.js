@@ -20,7 +20,7 @@ import {
   COLORS, DIR_VEC, ARROW_CHAR,
   FONT_TITLE, FONT_LABEL, FONT_MONO,
 } from "../constants.js";
-import { playSfx, playBgm, toggleMute } from "../audio.js";
+import { playSfx, playBgm, playNukeSfx, stopSfx, beginSfxLock, toggleMute } from "../audio.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -86,6 +86,11 @@ function posLabel(tok) {
   return `${colLabel(tok.col)}${tok.row + 1}`;
 }
 
+function hqCellLabel(pos) {
+  if (!Array.isArray(pos) || pos[0] == null || pos[1] == null) return "—";
+  return `${colLabel(pos[0])}${pos[1] + 1}`;
+}
+
 // ─── Idle Animation Helpers ───────────────────────────────────────────────────
 
 function addAttackIdle(scene, image, posRef) {
@@ -102,9 +107,9 @@ function addAttackIdle(scene, image, posRef) {
 
 // ─── Direction cycling tables ─────────────────────────────────────────────────
 
-// P1 atk cycles towards enemy lower-right: E → SE → S → E
+// Old Micks atk cycles towards enemy lower-right: E → SE → S → E
 const P1_ATK_CYCLE = ["E", "SE", "S"];
-// P2 atk cycles towards enemy upper-left: W → NW → N → W
+// The Emus atk cycles towards enemy upper-left: W → NW → N → W
 const P2_ATK_CYCLE = ["W", "NW", "N"];
 
 // Default placement directions
@@ -125,6 +130,7 @@ export class GameScene extends Phaser.Scene {
     this._nukeArmingSide  = null;
     this._prevWinner      = null;
     this._terrainSprites  = [];
+    this._terrainHpGfx    = null;
     this._rayGfxPool      = [];   // recycled Graphics objects for ray animations
     this._pickerData      = null; // {container, col, row, side} when picker is open
     this._lastActiveSide  = null; // track turn changes
@@ -150,10 +156,13 @@ export class GameScene extends Phaser.Scene {
     this.resourceGfx = this.add.graphics().setDepth(1);
     this.dmgGfx      = this.add.graphics().setDepth(2);
     this.dynGfx      = this.add.graphics().setDepth(3);
+    this.nukeZoneGfx = this.add.graphics().setDepth(8);
+    this._terrainHpGfx = this.add.graphics().setDepth(9);
 
     this._buildBoardImage();
     this._drawGridOnce();
     this._buildTokenSprites();
+    this._buildNukePreviewSprites();
     this._buildHqSprites();
     this._buildWinOverlay();
     this._buildTutorialOverlay();
@@ -227,12 +236,20 @@ export class GameScene extends Phaser.Scene {
       window._nukeArm = null;
     }
     this._nukeArmHandler = null;
+    for (const g of this._rayGfxPool) {
+      this.tweens.killTweensOf(g);
+      g.destroy();
+    }
+    this._rayGfxPool = [];
+    this._terrainHpGfx?.destroy();
+    this._terrainHpGfx = null;
     this._hideTokenPicker();
   }
 
   _returnToIntro(state) {
     if (this._returningToIntro) return;
     this._returningToIntro = true;
+    stopSfx(this, "sfx_victory");
     this._cleanupScene();
     this.scene.start("Intro", { ws: this.ws, initialState: state, replay: true });
   }
@@ -307,6 +324,9 @@ export class GameScene extends Phaser.Scene {
           fontFamily: "monospace", fontSize: "20px",
           color: "#fff080", stroke: "#000000", strokeThickness: 3,
         }).setOrigin(0.5).setDepth(13).setVisible(false);
+
+        this.tokenIdlePos[key] = { x: null, y: null };
+        addAttackIdle(this, this.tokenSprites[key], this.tokenIdlePos[key]);
       }
 
       this.tokenWarnLabels[key] = this.add.text(0, 0, "", {
@@ -315,10 +335,14 @@ export class GameScene extends Phaser.Scene {
         padding: { x: 5, y: 3 },
       }).setOrigin(0.5, 0).setDepth(20).setVisible(false);
     }
+  }
 
-    // Apply aggressive idle animation to Mick's first rifleman (demo)
-    this.tokenIdlePos["p1_atk_a"] = { x: 0, y: 0 };
-    addAttackIdle(this, this.tokenSprites["p1_atk_a"], this.tokenIdlePos["p1_atk_a"]);
+  _buildNukePreviewSprites() {
+    const sz = CELL * 0.92;
+    this.nukePreviewSprites = {
+      p1: this.add.image(0, 0, "tok_mick_nuke").setDisplaySize(sz, sz).setDepth(12).setVisible(false),
+      p2: this.add.image(0, 0, "tok_emu_nuke").setDisplaySize(sz, sz).setDepth(12).setVisible(false),
+    };
   }
 
   _buildHqSprites() {
@@ -337,7 +361,7 @@ export class GameScene extends Phaser.Scene {
     const cx = CANVAS_W / 2;
     const cy = CANVAS_H / 2;
     const panelW = 620;
-    const panelH = 290;
+    const panelH = 310;
 
     this._winLayout = {
       panelW,
@@ -345,12 +369,15 @@ export class GameScene extends Phaser.Scene {
       titleY: -102,
       subY: -58,
       subWrapW: 340,
+      coordsY: 8,
+      coordsGap: 10,
       hqX: 228,
-      hqY: 56,
+      hqY: 72,
       hqSize: 76,
-      hintY: 82,
+      hqGap: 14,
+      hintY: 98,
       hintGap: 18,
-      buttonY: 118,
+      buttonY: 128,
       buttonGap: 18,
       buttonH: 34,
       bottomPad: 24,
@@ -374,6 +401,10 @@ export class GameScene extends Phaser.Scene {
       color: "#f0c080", align: "center", wordWrap: { width: this._winLayout.subWrapW },
     }).setOrigin(0.5, 0);
 
+    this._winHqCoordsTxt = this.add.text(0, this._winLayout.coordsY, "", {
+      fontFamily: FONT_MONO, fontSize: "11px", color: "#c8a060", align: "center",
+    }).setOrigin(0.5);
+
     this._winHintTxt = this.add.text(0, this._winLayout.hintY, "Choose a mode to start again.", {
       fontFamily: FONT_MONO, fontSize: "10px", color: "#6a5030",
     }).setOrigin(0.5);
@@ -391,7 +422,9 @@ export class GameScene extends Phaser.Scene {
     this._playAgainBtnBg.on("pointerout", () => this._playAgainBtnBg.setFillStyle(0x1a1208));
     this._playAgainBtnBg.on("pointerdown", (_pointer, _localX, _localY, event) => {
       event?.stopPropagation?.();
+      stopSfx(this, "sfx_victory");
       playSfx(this, "sfx_select");
+      if (this._bgmStarted) playBgm(this, "bgm_outback");
       this.ws?.send("return_to_mode_select", {});
     });
     this._playAgainBtn.add([this._playAgainBtnBg, this._playAgainBtnTxt]);
@@ -403,8 +436,8 @@ export class GameScene extends Phaser.Scene {
       .setDisplaySize(this._winLayout.hqSize, this._winLayout.hqSize)
       .setDepth(41);
 
-    this.winContainer.add([bg, this._winTitleTxt, this._winSubTxt, this._winHintTxt,
-                           this._winHqLeft, this._winHqRight, this._playAgainBtn]);
+    this.winContainer.add([bg, this._winTitleTxt, this._winSubTxt, this._winHqCoordsTxt,
+                           this._winHintTxt, this._winHqLeft, this._winHqRight, this._playAgainBtn]);
   }
 
   _buildTutorialOverlay() {
@@ -467,6 +500,25 @@ export class GameScene extends Phaser.Scene {
       fontFamily: FONT_MONO, fontSize: `${L.hintSize}px`, color: "#7a6a50",
     }).setOrigin(0.5).setVisible(false);
 
+    this._tutDoneBtn = this.add.container(0, 0).setSize(220, 34).setVisible(false);
+    this._tutDoneBtnBg = this.add.rectangle(0, 0, 220, 34, 0x1a1208)
+      .setStrokeStyle(2, 0xd4a030, 1)
+      .setInteractive({ useHandCursor: true });
+    this._tutDoneBtnTxt = this.add.text(0, 0, "BACK TO START", {
+      fontFamily: "'Press Start 2P'",
+      fontSize: "9px",
+      color: "#f0e060",
+    }).setOrigin(0.5);
+    this._tutDoneBtnBg.on("pointerover", () => this._tutDoneBtnBg.setFillStyle(0x2e2010));
+    this._tutDoneBtnBg.on("pointerout", () => this._tutDoneBtnBg.setFillStyle(0x1a1208));
+    this._tutDoneBtnBg.on("pointerdown", (_pointer, _localX, _localY, event) => {
+      event?.stopPropagation?.();
+      playSfx(this, "sfx_select");
+      if (this._bgmStarted) playBgm(this, "bgm_outback");
+      this.ws?.send("return_to_mode_select", {});
+    });
+    this._tutDoneBtn.add([this._tutDoneBtnBg, this._tutDoneBtnTxt]);
+
     const gifHtml = [
       '<motion.div class="tut-gif-wrap" style="width:200px;height:148px;overflow:hidden;',
       'border:2px solid #5a4020;border-radius:8px;background:#0d0804;">',
@@ -497,6 +549,8 @@ export class GameScene extends Phaser.Scene {
     this._tutHitArea = this.add.zone(0, 0, L.panelW, L.panelH)
       .setInteractive({ useHandCursor: true });
     this.tutorialContainer.add(this._tutHitArea);
+    // Done button must sit above the full-panel hit zone or clicks never reach it.
+    this.tutorialContainer.add(this._tutDoneBtn);
     this._tutHitArea.on("pointerdown", () => {
       const tut = this.gameState?.tutorial;
       if (tut?.active && this._tutorialCanSpaceContinue(tut)) this._sendTutorialDismiss();
@@ -546,7 +600,21 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  _applyTutorialLayout(mode, { picCount = 1, bodyText = "" } = {}) {
+  _isTutorialCompleteStep(tut) {
+    return !!(tut?.completed || tut?.step_id === "complete");
+  }
+
+  _syncTutorialPanelInput(tut) {
+    if (!this._tutHitArea) return;
+    if (tut?.active && this._isTutorialCompleteStep(tut)) {
+      this._tutHitArea.disableInteractive();
+      if (this._tutDoneBtn) this.tutorialContainer.bringToTop(this._tutDoneBtn);
+    } else {
+      this._tutHitArea.setInteractive({ useHandCursor: true });
+    }
+  }
+
+  _applyTutorialLayout(mode, { picCount = 1, bodyText = "", showDoneBtn = false } = {}) {
     const L = mode === "gif"
       ? this._tutLayoutWithGif
       : mode === "pic"
@@ -557,6 +625,7 @@ export class GameScene extends Phaser.Scene {
     if (mode === "gif") {
       panelH = this._tutorialGifPanelHeight(L, bodyText);
     }
+    if (showDoneBtn) panelH += 48;
     const { panelW, pad } = L;
     const mediaW = mode === "pic"
       ? (multiPic ? (L.picWMulti ?? L.picW) : (L.picW ?? 0))
@@ -585,7 +654,9 @@ export class GameScene extends Phaser.Scene {
     const bodyY = mode === "gif"
       ? headerY + headerBlockH
       : (L.bodyY ?? headerY + 56);
-    const hintBottomPad = L.hintBottomPad ?? 18;
+    const hintBottomPad = showDoneBtn
+      ? (L.hintBottomPad ?? 18) + 40
+      : (L.hintBottomPad ?? 18);
 
     this._tutStepTxt
       .setPosition(panelW / 2 - pad, -panelH / 2 + headerY)
@@ -603,6 +674,10 @@ export class GameScene extends Phaser.Scene {
     this._tutHintTxt
       .setPosition(leftCx, panelH / 2 - hintBottomPad)
       .setFontSize(L.hintSize);
+
+    if (showDoneBtn && this._tutDoneBtn) {
+      this._tutDoneBtn.setPosition(0, panelH / 2 - pad - 17);
+    }
 
     if (mode === "gif") {
       const gifTop = panelH - pad - mediaH;
@@ -706,7 +781,7 @@ export class GameScene extends Phaser.Scene {
     this._drawTutorialSideCells("p2");
   }
 
-  /** Pulse-highlight all cells on one side (e.g. Mob / Emu territory for explain_win). */
+  /** Pulse-highlight all cells on one side (e.g. The Emus territory for explain_win). */
   _drawTutorialSideCells(side) {
     const cw = GRID_DRAW_W / GRID_SIZE;
     const ch = GRID_DRAW_H / GRID_SIZE;
@@ -728,20 +803,26 @@ export class GameScene extends Phaser.Scene {
   }
 
   _tutorialCanSpaceContinue(tut) {
+    if (this._isTutorialCompleteStep(tut)) return false;
     return !!(tut?.needs_dismiss || tut?.allow_skip);
   }
 
   _updateTutorialHint(tut) {
     if (!tut?.active) {
       this._tutHintTxt.setVisible(false);
+      this._tutDoneBtn?.setVisible(false);
       return;
     }
-    if (tut.completed) {
+    if (this._isTutorialCompleteStep(tut)) {
       this._tutHintTxt
-        .setText("Tutorial complete! Press SPACE or click to play.")
+        .setText("Choose a mode to start again.")
         .setVisible(true);
+      this._tutDoneBtn?.setVisible(true);
+      this._syncTutorialPanelInput(tut);
       return;
     }
+    this._tutDoneBtn?.setVisible(false);
+    this._syncTutorialPanelInput(tut);
     const parts = [];
     if (tut.needs_dismiss || tut.allow_skip) parts.push("SPACE or click to continue");
     if (tut.allow_skip && !tut.needs_dismiss) parts.push("SPACE to skip");
@@ -859,7 +940,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   _showTurnOverlay(side) {
-    const label = side === "p1" ? "PLAYER 1'S TURN" : "PLAYER 2'S TURN";
+    const label = side === "p1" ? "OLD MICKS' TURN" : "THE EMUS' TURN";
     const sub = this.gameState?.manual_controls
       ? "Click your side to place tokens, then press END TURN"
       : "Arrange physical tokens and confirm with markers";
@@ -1141,15 +1222,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     this._renderDamage(G);
+    this._renderTerrainHpDots(s);
 
     this.dynGfx.clear();
     const { hardMap, softMap, destroyedMap, p1TargetMap, p2TargetMap } = this._buildMaps(s);
 
     if (inBattle) {
       if (s.p1?.def?.col != null)
-        this._drawDefZone(s.p1.def.col, s.p1.def.row, G.def_tier_p1 ?? 0, 0xe8d060);
+        this._drawDefZone(s.p1.def.col, s.p1.def.row, G.def_tier_p1 ?? 0, COLORS.defZoneColor);
       if (s.p2?.def?.col != null)
-        this._drawDefZone(s.p2.def.col, s.p2.def.row, G.def_tier_p2 ?? 0, 0x60e8a0);
+        this._drawDefZone(s.p2.def.col, s.p2.def.row, G.def_tier_p2 ?? 0, COLORS.defZoneColor);
 
       for (const role of ["atk_a", "atk_b"]) {
         if (s.p1?.[role]?.col != null && s.p1[role].direction)
@@ -1258,19 +1340,85 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  _renderTerrainHpDots(state) {
+    const terrain = state?.terrain;
+    const G = state?.game || {};
+    const g = this._terrainHpGfx;
+    if (!g) return;
+
+    g.clear();
+    if (!terrain) return;
+
+    const hardGoneKeys = new Set((G.hard_gone || []).map(([c, r]) => `${c},${r}`));
+    const softGoneKeys = new Set((G.soft_gone || []).map(([c, r]) => `${c},${r}`));
+    const hardMaxHp = Number(G.hard_terrain_hp ?? 5);
+    const softMaxHp = Number(G.soft_terrain_hp ?? 2);
+    const cw = GRID_DRAW_W / GRID_SIZE;
+    const ch = GRID_DRAW_H / GRID_SIZE;
+
+    const show = (kind, tile, maxHp, damageMap, goneKeys, fillColor) => {
+      const key = `${tile.col},${tile.row}`;
+      if (goneKeys.has(key)) return;
+
+      const damage = Number(damageMap?.[key] ?? 0);
+      const remaining = Math.max(0, maxHp - damage);
+      if (remaining <= 0) return;
+
+      const dotCount = Math.max(1, maxHp);
+      const radius = kind === "hard" ? 2.1 : 2.3;
+      const gap = 2.2;
+      const totalW = dotCount * radius * 2 + (dotCount - 1) * gap;
+      const bx = BOARD_OFF_X + GRID_INSET_X + tile.col * cw;
+      const by = BOARD_OFF_Y + GRID_INSET_Y + tile.row * ch;
+      const startX = bx + cw * 0.68 - totalW / 2 + radius;
+      const y = by + ch * 0.76;
+
+      g.fillStyle(0x000000, 0.42);
+      g.fillRoundedRect(startX - radius - 2, y - radius - 2, totalW + 4, radius * 2 + 4, 4);
+
+      for (let i = 0; i < dotCount; i++) {
+        const x = startX + i * (radius * 2 + gap);
+        if (i < remaining) {
+          g.fillStyle(fillColor, 0.95);
+          g.fillCircle(x, y, radius);
+        } else {
+          g.fillStyle(0x000000, 0.55);
+          g.fillCircle(x, y, radius);
+          g.lineStyle(1, fillColor, 0.55);
+          g.strokeCircle(x, y, radius);
+        }
+      }
+    };
+
+    for (const t of terrain.p1_hard || []) show("hard", t, hardMaxHp, G.hard_damage, hardGoneKeys, 0xffd060);
+    for (const t of terrain.p2_hard || []) show("hard", t, hardMaxHp, G.hard_damage, hardGoneKeys, 0xffd060);
+    for (const t of terrain.p1_soft || []) show("soft", t, softMaxHp, G.soft_damage, softGoneKeys, 0xffb080);
+    for (const t of terrain.p2_soft || []) show("soft", t, softMaxHp, G.soft_damage, softGoneKeys, 0xffb080);
+  }
+
   // ─── Defence zone ───────────────────────────────────────────────────────────
 
   _drawDefZone(col, row, tier, color) {
-    const rad  = tier >= 1 ? 2 : 1;
-    const cw   = GRID_DRAW_W / GRID_SIZE;
-    const ch   = GRID_DRAW_H / GRID_SIZE;
-    const size = rad * 2 + 1;
-    const x    = BOARD_OFF_X + GRID_INSET_X + (col - rad) * cw;
-    const y    = BOARD_OFF_Y + GRID_INSET_Y + (row - rad) * ch;
-    this.dynGfx.fillStyle(color, 0.09);
-    this.dynGfx.fillRect(x, y, size * cw, size * ch);
-    this.dynGfx.lineStyle(2, color, 0.55);
-    this.dynGfx.strokeRect(x, y, size * cw, size * ch);
+    const rad = tier >= 1 ? 2 : 1;
+    const cw  = GRID_DRAW_W / GRID_SIZE;
+    const ch  = GRID_DRAW_H / GRID_SIZE;
+    const g   = this.dynGfx;
+
+    for (let r = row - rad; r <= row + rad; r++) {
+      for (let c = col - rad; c <= col + rad; c++) {
+        if (c < 0 || c >= GRID_SIZE || r < 0 || r >= GRID_SIZE) continue;
+        const bx = BOARD_OFF_X + GRID_INSET_X + c * cw;
+        const by = BOARD_OFF_Y + GRID_INSET_Y + r * ch;
+        const ix = bx + 1;
+        const iy = by + 1;
+        const iw = cw - 2;
+        const ih = ch - 2;
+        g.fillStyle(color, 0.09);
+        g.fillRect(ix, iy, iw, ih);
+        g.lineStyle(2, color, 0.65);
+        g.strokeRect(ix, iy, iw, ih);
+      }
+    }
   }
 
   // ─── Attack ray ─────────────────────────────────────────────────────────────
@@ -1326,7 +1474,7 @@ export class GameScene extends Phaser.Scene {
       const s = 10;
       g.lineStyle(4, 0x000000, 0.7);
       g.strokeTriangle(x, y - s, x + s, y, x - s, y);
-      g.lineStyle(2.5, last.type === "blocked" ? 0xff4000 : 0xffe040, 1);
+      g.lineStyle(2.5, COLORS.attackRayHit, 1);
       g.strokeTriangle(x, y - s, x + s, y, x - s, y);
     }
   }
@@ -1336,6 +1484,7 @@ export class GameScene extends Phaser.Scene {
   _drawHqPlacementRings(s) {
     const cw = GRID_DRAW_W / GRID_SIZE, ch = GRID_DRAW_H / GRID_SIZE;
     for (const side of ["p1", "p2"]) {
+      if (s.setup?.hq?.[side]?.confirmed) continue;
       if (s.phase === "hq_placement" && s.setup?.active_setup_side !== side) continue;
       const marker = s.hq_markers?.[side];
       if (!marker || marker.col == null || marker.stale) continue;
@@ -1359,6 +1508,19 @@ export class GameScene extends Phaser.Scene {
     const g  = this.dynGfx;
     const cw = GRID_DRAW_W / GRID_SIZE, ch = GRID_DRAW_H / GRID_SIZE;
 
+    for (const [key, sprite] of Object.entries(this.tokenSprites)) {
+      if (!sprite) continue;
+      this.tweens.killTweensOf(sprite);
+      sprite.setVisible(false);
+      const posRef = this.tokenIdlePos[key];
+      if (posRef && posRef.x != null && posRef.y != null) {
+        sprite.setPosition(posRef.x, posRef.y);
+      }
+    }
+    for (const badge of Object.values(this.tokenBadges)) badge?.setVisible(false);
+    for (const arrow of Object.values(this.tokenArrows)) arrow?.setVisible(false);
+    for (const warn of Object.values(this.tokenWarnLabels)) warn?.setVisible(false);
+
     const draw = (key, tok) => {
       const side = key.startsWith("p1") ? "p1" : "p2";
       const role = key.replace(`${side}_`, "");
@@ -1367,6 +1529,8 @@ export class GameScene extends Phaser.Scene {
       let spriteKey = key;
       if (role === "def") {
         const defTier = side === "p1" ? (G?.def_tier_p1 ?? 0) : (G?.def_tier_p2 ?? 0);
+        this.tokenSprites[`${side}_def`]?.setVisible(false);
+        this.tokenSprites[`${side}_def_2`]?.setVisible(false);
         if (defTier >= 1) {
           spriteKey = `${side}_def_2`;
         }
@@ -1379,10 +1543,10 @@ export class GameScene extends Phaser.Scene {
       const vis    = tok && tok.col != null && tok.row != null;
 
       if (!vis) {
-        sprite.setVisible(false);
-        badge?.setVisible(false);
-        arrow?.setVisible(false);
-        warn?.setVisible(false);
+        if (this.tokenIdlePos[key]) {
+          this.tokenIdlePos[key].x = null;
+          this.tokenIdlePos[key].y = null;
+        }
         return;
       }
 
@@ -1393,10 +1557,10 @@ export class GameScene extends Phaser.Scene {
         ? (side === "p1" ? (G?.def_tier_p1 ?? 0) : (G?.def_tier_p2 ?? 0))
         : (G?.atk_tiers?.[side]?.[role] ?? 0);
 
-      // Update idle animation reference position when token moves
+      const spriteY = y - 1;
       if (this.tokenIdlePos[key]) {
         this.tokenIdlePos[key].x = x;
-        this.tokenIdlePos[key].y = y;
+        this.tokenIdlePos[key].y = spriteY;
       }
 
       if (tier > 0 && !stale) {
@@ -1409,7 +1573,10 @@ export class GameScene extends Phaser.Scene {
       g.fillStyle(0x000000, 0.28 * alpha);
       g.fillEllipse(x, y + ch * 0.30, cw * 0.55, ch * 0.15);
 
-      sprite.setPosition(x, y - 1).setAngle(0).setAlpha(alpha).setVisible(true);
+      sprite.setPosition(x, spriteY).setAngle(0).setAlpha(alpha).setVisible(true);
+      if (this.tokenIdlePos[key]) {
+        sprite.setPosition(this.tokenIdlePos[key].x, this.tokenIdlePos[key].y);
+      }
 
       if (stale) {
         g.lineStyle(1, 0xfff080, 0.50);
@@ -1478,6 +1645,7 @@ export class GameScene extends Phaser.Scene {
       (G.win_reason === "homestead_destroyed" || G.win_reason === "nest_destroyed");
 
     for (const side of ["p1", "p2"]) {
+      if (s.setup?.hq?.[side]?.confirmed) continue;
       if (s.phase === "hq_placement" && s.setup?.active_setup_side !== side) continue;
       const m = s.hq_markers?.[side];
       if (m?.col != null && !m.stale) {
@@ -1510,18 +1678,35 @@ export class GameScene extends Phaser.Scene {
     }
 
     const msgs = {
-      homestead_destroyed: ["THE MOB WINS",  "The Grain Stash is gone. No wheat, no operation. Old Mick has nothing left to protect."],
-      nest_destroyed:      ["OLD MICK WINS", "The Bird Council is gone. The ostriches went home. The emus have no idea what they're doing anymore."],
+      homestead_destroyed: ["THE EMUS WIN",  "The Grain Stash is gone. No wheat, no operation. Old Mick has nothing left to protect."],
+      nest_destroyed:      ["OLD MICKS WIN", "The Bird Council is gone. The ostriches went home. The emus have no idea what they're doing anymore."],
       attrition: G.winner === "p1"
-        ? ["OLD MICK WINS", "The scrublands go quiet. The outback belongs to Old Mick."]
-        : ["THE MOB WINS",  "No grain, no operation. The pack eats well tonight."],
+        ? ["OLD MICKS WIN", "The scrublands go quiet. The outback belongs to Old Mick."]
+        : ["THE EMUS WIN",  "No grain, no operation. The pack eats well tonight."],
     };
     const [title, sub] = msgs[G.win_reason] ?? [`${G.winner?.toUpperCase()} WINS`, ""];
     this._winTitleTxt.setText(title);
     this._winSubTxt.setText(sub);
+
+    const p1Hq = hqCellLabel(G.hq_revealed?.p1);
+    const p2Hq = hqCellLabel(G.hq_revealed?.p2);
+    this._winHqCoordsTxt.setText(`OLD MICKS: ${p1Hq}, THE EMUS: ${p2Hq}`);
+
     const layout = this._winLayout;
     const subBottom = this._winSubTxt.y + this._winSubTxt.height;
-    const minHintY = subBottom + layout.hintGap + this._winHintTxt.height / 2;
+    const coordsY = Math.max(
+      layout.coordsY,
+      subBottom + layout.coordsGap + this._winHqCoordsTxt.height / 2,
+    );
+    this._winHqCoordsTxt.setY(coordsY);
+
+    const hqTop = coordsY + this._winHqCoordsTxt.height / 2 + layout.hqGap;
+    const hqY = Math.max(layout.hqY, hqTop + layout.hqSize / 2);
+    this._winHqLeft.setY(hqY);
+    this._winHqRight.setY(hqY);
+
+    const hqBottom = hqY + layout.hqSize / 2;
+    const minHintY = hqBottom + layout.hintGap + this._winHintTxt.height / 2;
     const minButtonY = minHintY + this._winHintTxt.height / 2 + layout.buttonGap + layout.buttonH / 2;
     const maxButtonY = layout.panelH / 2 - layout.bottomPad - layout.buttonH / 2;
     const buttonY = Math.min(Math.max(layout.buttonY, minButtonY), maxButtonY);
@@ -1600,26 +1785,61 @@ export class GameScene extends Phaser.Scene {
 
   _drawNukePendingZone(battle) {
     const pending = battle?.pending_nuke;
-    if (!pending || pending.col == null || pending.row == null) return;
+    this.nukeZoneGfx.clear();
+
+    if (!pending || pending.col == null || pending.row == null) {
+      this.nukePreviewSprites?.p1?.setVisible(false);
+      this.nukePreviewSprites?.p2?.setVisible(false);
+      return;
+    }
 
     const cx = pending.col;
     const cy = pending.row;
     const cw = GRID_DRAW_W / GRID_SIZE;
     const ch = GRID_DRAW_H / GRID_SIZE;
     const pulse = 0.5 + 0.5 * Math.sin(this.time.now / 160);
-    const g = this.dynGfx;
+    const g = this.nukeZoneGfx;
+    const fillA = 0.18 + 0.22 * pulse;
+    const strokeA = 0.5 + 0.45 * pulse;
+    const glowA = 0.22 + 0.28 * pulse;
 
     for (let row = cy - 1; row <= cy + 1; row++) {
       for (let col = cx - 1; col <= cx + 1; col++) {
         if (col < 0 || col >= GRID_SIZE || row < 0 || row >= GRID_SIZE) continue;
         const bx = BOARD_OFF_X + GRID_INSET_X + col * cw;
         const by = BOARD_OFF_Y + GRID_INSET_Y + row * ch;
-        g.fillStyle(0xff6020, 0.12 + 0.12 * pulse);
-        g.fillRect(bx + 1, by + 1, cw - 2, ch - 2);
-        g.lineStyle(2, 0xff9040, 0.55 + 0.35 * pulse);
-        g.strokeRect(bx + 1, by + 1, cw - 2, ch - 2);
+        const ix = bx + 1;
+        const iy = by + 1;
+        const iw = cw - 2;
+        const ih = ch - 2;
+
+        g.fillStyle(COLORS.nukeZoneFill, fillA);
+        g.fillRect(ix, iy, iw, ih);
+
+        g.lineStyle(4, COLORS.nukeZoneGlow, glowA);
+        g.strokeRect(ix - 1, iy - 1, iw + 2, ih + 2);
+
+        g.lineStyle(2, COLORS.nukeZoneStroke, strokeA);
+        g.strokeRect(ix, iy, iw, ih);
       }
     }
+
+    const { x, y } = cellXY(cx, cy);
+    const haloR = Math.min(cw, ch) * 0.48;
+    g.fillStyle(COLORS.nukeZoneGlow, 0.14 + 0.18 * pulse);
+    g.fillCircle(x, y, haloR);
+    g.lineStyle(3, COLORS.nukeZoneStroke, strokeA);
+    g.strokeCircle(x, y, haloR * 0.92);
+    g.lineStyle(1.5, COLORS.nukeZoneGlow, glowA);
+    g.strokeCircle(x, y, haloR * 1.08);
+
+    const side = pending.side === "p2" ? "p2" : "p1";
+    this.nukePreviewSprites?.p1?.setVisible(false);
+    this.nukePreviewSprites?.p2?.setVisible(false);
+    this.nukePreviewSprites?.[side]
+      ?.setPosition(x, y)
+      .setAlpha(0.82 + 0.18 * pulse)
+      .setVisible(true);
   }
 
   // ─── Tutorial overlay ────────────────────────────────────────────────────────
@@ -1632,6 +1852,7 @@ export class GameScene extends Phaser.Scene {
       this._tutGifDom?.setVisible(false);
       this._tutPicDom?.setVisible(false);
       this._tutCellLabel?.setVisible(false);
+      this._tutDoneBtn?.setVisible(false);
       return;
     }
 
@@ -1646,8 +1867,10 @@ export class GameScene extends Phaser.Scene {
     this._tutTitleTxt.setText(tut.title || "");
     this._tutTextTxt.setText(tut.text || "");
     const bodyText = tut.text || "";
-    this._applyTutorialLayout(layoutMode, { picCount: picUrls.length, bodyText });
+    const showDoneBtn = this._isTutorialCompleteStep(tut);
+    this._applyTutorialLayout(layoutMode, { picCount: picUrls.length, bodyText, showDoneBtn });
     this._updateTutorialHint(tut);
+    this._syncTutorialPanelInput(tut);
     this.tutorialContainer.setVisible(true);
 
     if (layoutMode === "pic" && picUrls.length) {
@@ -1741,14 +1964,22 @@ export class GameScene extends Phaser.Scene {
     this._wsStateHandler = (s) => {
       if (s?.phase === "mode_select") {
         this.gameState = s;
+        this._prevWinner = null;
         this._returnToIntro(s);
         return;
       }
 
       const prevSide = this._lastActiveSide;
       const newSide  = s.battle?.active_side ?? null;
+      const winner   = s.game?.winner ?? null;
 
       this.gameState = s;
+
+      // Play the victory sound once for any win condition, including HQ wins.
+      if (winner && winner !== this._prevWinner) {
+        playSfx(this, "sfx_victory");
+      }
+      this._prevWinner = winner;
 
       // ── Tier-up detection (state diff) ─────────────────────────────────────
       const t1 = s.game?.tier_p1 ?? s.p1?.tier ?? 0;
@@ -1771,6 +2002,9 @@ export class GameScene extends Phaser.Scene {
     this.ws.on("state", this._wsStateHandler);
 
     this._wsEventsHandler = (events) => {
+      const hasNuke = events.some((ev) => ev.type === "nuke_triggered");
+      if (hasNuke) beginSfxLock(this);
+
       const nukeCells = events
         .filter((ev) => ev?.nuke && Array.isArray(ev.cell))
         .map((ev) => ev.cell);
@@ -1812,16 +2046,16 @@ export class GameScene extends Phaser.Scene {
               this.cameras.main.shake(600, 0.020);
             });
             break;
-          case "nuke_triggered":
-            playSfx(this, "sfx_explosion");
-            this._animateNuke({ ...ev, cells: nukeCells });
+          case "nuke_triggered": {
+            const nukeKey = ev.side === "p1" ? "sfx_p1_nuke" : "sfx_p2_nuke";
             this.cameras.main.shake(500, 0.018);
+            playNukeSfx(this, nukeKey, () => {
+              this._animateNuke({ ...ev, cells: nukeCells });
+            });
             break;
+          }
           case "cell_shielded":
             playSfx(this, "sfx_p1_defense");
-            break;
-          case "attrition_win":
-            playSfx(this, "sfx_victory");
             break;
         }
       }
@@ -1861,7 +2095,7 @@ export class GameScene extends Phaser.Scene {
           const mx = bx + cw / 2, my = by + ch / 2, s = 9;
           g.lineStyle(3, 0x000000, 0.7);
           g.strokeTriangle(mx, my - s, mx + s, my, mx - s, my);
-          g.lineStyle(2, 0xffe040, 1.0);
+          g.lineStyle(2, COLORS.attackRayHit, 1.0);
           g.strokeTriangle(mx, my - s, mx + s, my, mx - s, my);
 
           if (step.type === "territory") {

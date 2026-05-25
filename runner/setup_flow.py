@@ -17,13 +17,13 @@ SLOTS = ATTACKER_SLOTS + (DEFENDER_SLOT,)
 
 FIRST_PLAYER_SIDE_TO_PLAYER = {
     "old_mick": "p1",
-    "mob": "p2",
+    "emus": "p2",
 }
 PLAYER_TO_FIRST_PLAYER_SIDE = {player: side for side, player in FIRST_PLAYER_SIDE_TO_PLAYER.items()}
 
 SIDE_DISPLAY_NAME = {
-    "p1": "Old Mick",
-    "p2": "The Mob",
+    "p1": "Old Micks",
+    "p2": "The Emus",
 }
 
 SIDE_ERROR_CODES = {
@@ -32,8 +32,8 @@ SIDE_ERROR_CODES = {
         "direction": "old_mick_attack_direction_invalid",
     },
     "p2": {
-        "zone": "mob_token_invalid_zone",
-        "direction": "mob_attack_direction_invalid",
+        "zone": "emus_token_invalid_zone",
+        "direction": "emus_attack_direction_invalid",
     },
 }
 
@@ -50,9 +50,9 @@ ERROR_MESSAGES = {
     "hq_wrong_side": "HQ must be placed on that side's own territory and not on the fence.",
     "hq_setup_complete": "Both HQ locations are confirmed. Starting the game.",
     "old_mick_token_invalid_zone": "Old Mick tokens must stay on the Old Mick side and cannot be placed on the fence.",
-    "mob_token_invalid_zone": "Mob tokens must stay on the Mob side and cannot be placed on the fence.",
+    "emus_token_invalid_zone": "The Emus tokens must stay on The Emus side and cannot be placed on the fence.",
     "old_mick_attack_direction_invalid": "Old Mick attack tokens can only aim East, South-East, South, or South-West.",
-    "mob_attack_direction_invalid": "Mob attack tokens can only aim West, North-West, North, or North-East.",
+    "emus_attack_direction_invalid": "The Emus attack tokens can only aim West, North-West, North, or North-East.",
     "inactive_side_token_changed": "Only the active player's tokens may move during this turn. The opponent token change was ignored.",
 }
 

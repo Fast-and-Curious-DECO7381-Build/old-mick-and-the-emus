@@ -85,7 +85,7 @@ Typical operator flow:
 
 1. Start `runner.run_manual_play`.
 2. Choose a mode with `mode normal` or `mode tutorial`.
-3. Choose the first setup side with `choose_side old_mick` or `choose_side mob`.
+3. Choose the first setup side with `choose_side old_mick` or `choose_side emus`.
 4. Place and confirm both HQs.
 5. Place tokens with `set` commands.
 6. Advance turns with `flip` or `turn 1` / `turn 2`.
@@ -100,7 +100,7 @@ show_setup
 mode normal
 mode tutorial
 choose_side old_mick
-choose_side mob
+choose_side emus
 set_hq p1 A3
 confirm_hq p1
 reset_setup
