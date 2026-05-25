@@ -183,7 +183,7 @@ function _setAttackCard(side, role, game, isActive) {
   const fillEl  = el(`${side}-fill-${role}`);
 
   if (numEl)   numEl.textContent   = pad2(kills);
-  if (starsEl) starsEl.textContent = starsHTML(level);
+  if (starsEl) starsEl.textContent = starsHTML(level + 1, 3);
   if (fillEl)  fillEl.style.height = `${(fill * 100).toFixed(1)}%`;
 }
 
