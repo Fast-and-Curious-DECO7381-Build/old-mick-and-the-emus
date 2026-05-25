@@ -11,13 +11,20 @@
 <div class="screen">
 
   <div class="topbar">
-    <span class="topbar-title">How to Play</span>
+    <span class="topbar-title">How to Play the Game</span>
     <button class="topbar-close" id="closeBtn" aria-label="Close">
       <svg viewBox="0 0 14 14" fill="none"><line x1="1" y1="1" x2="13" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="13" y1="1" x2="1" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
   </div>
 
   <div class="rows">
+
+    <!-- FACTION HEADERS -->
+    <div class="faction-header">
+      <div class="faction-label farmer">Old Mick</div>
+      <div></div>
+      <div class="faction-label emu">The Emus</div>
+    </div>
 
     <!-- WIN CONDITION -->
     <div class="row">
@@ -26,16 +33,13 @@
         <div class="card-name">Grain Stash</div>
         <div class="card-sub">Secret HQ — hidden</div>
       </div>
-      <div class="center">
+      <div class="center no-gif">
         <div class="mechanic">
           <div class="mechanic-title">Win Condition</div>
           <ul class="mechanic-list">
             <li>Destroy the enemy's secret HQ — instant win</li>
             <li>Wipe all enemy cells — destroy every Farm or every Nest</li>
           </ul>
-        </div>
-        <div class="gif">
-          <span class="gif-label">GIF — HQ cell hit and destroyed</span>
         </div>
       </div>
       <div class="card emu">
@@ -48,12 +52,15 @@
     <!-- ATTACK TOKEN -->
     <div class="row">
       <div class="card farmer">
-        <div class="card-thumb"><img src="../assets/images/tokens/atk-m-1.png" alt="Rifleman A"></div>
+        <div class="card-thumb-pair">
+          <img src="../assets/images/tokens/atk-m-1.png" alt="Rifleman A">
+          <img src="../assets/images/tokens/atk-m-2.png" alt="Rifleman B">
+        </div>
         <div class="card-name">Rifleman A / B &times; 2</div>
       </div>
-      <div class="center">
+      <div class="center no-gif">
         <div class="mechanic">
-          <div class="mechanic-title">Attack</div>
+          <div class="mechanic-title">Attack Token</div>
           <p class="mechanic-text">Fires in a straight line — horizontal, vertical, or diagonal. Hits the first enemy cell it reaches.</p>
           <div class="pills">
             <span class="pill">Lv 1 — 1 cell</span>
@@ -64,12 +71,12 @@
           </div>
           <span class="upgrade-note">Each token levels up independently.</span>
         </div>
-        <div class="gif">
-          <span class="gif-label">GIF — Token firing straight line, H / V / diagonal</span>
-        </div>
       </div>
       <div class="card emu">
-        <div class="card-thumb"><img src="../assets/images/tokens/atk-e-1.png" alt="Emu Pack A"></div>
+        <div class="card-thumb-pair">
+          <img src="../assets/images/tokens/atk-e-1.png" alt="Emu Pack A">
+          <img src="../assets/images/tokens/atk-e-2.png" alt="Emu Pack B">
+        </div>
         <div class="card-name">Emu Pack A / B &times; 2</div>
       </div>
     </div>
@@ -80,9 +87,9 @@
         <div class="card-thumb"><img src="../assets/images/tokens/def-m-level1.png" alt="Old Mick"></div>
         <div class="card-name">Old Mick &times; 1</div>
       </div>
-      <div class="center">
+      <div class="center no-gif">
         <div class="mechanic">
-          <div class="mechanic-title">Defence</div>
+          <div class="mechanic-title">Defence Token</div>
           <p class="mechanic-text">Projects a perimeter zone around itself. Break the perimeter first — then the cell. Move the token and the perimeter resets.</p>
           <div class="pills">
             <span class="pill">Default — 3&times;3</span>
@@ -90,9 +97,6 @@
             <span class="pill">Upgraded — 5&times;5</span>
           </div>
           <span class="upgrade-note">Upgrades when your own cells reach roughly half.</span>
-        </div>
-        <div class="gif">
-          <span class="gif-label">GIF — Perimeter zone, tile break, cell destroy, token move resets</span>
         </div>
       </div>
       <div class="card emu">
@@ -108,19 +112,16 @@
         <div class="card-name">Keith's Cannon</div>
         <div class="card-sub">One use only</div>
       </div>
-      <div class="center">
+      <div class="center no-gif">
         <div class="mechanic">
-          <div class="mechanic-title">Wild</div>
+          <div class="mechanic-title">Wild Token</div>
           <p class="mechanic-text">Place a 3&times;3 zone in enemy territory. 5 random cells destroyed. Bypasses perimeter. One use only.</p>
           <span class="upgrade-note">Unlocks when your own cells reach critically low.</span>
-        </div>
-        <div class="gif">
-          <span class="gif-label">GIF — 3&times;3 zone, 5 random cells pop</span>
         </div>
       </div>
       <div class="card emu">
         <div class="card-thumb"><img src="../assets/images/tokens/wild-token-e-dino.png" alt="Dino"></div>
-        <div class="card-name">Dino</div>
+        <div class="card-name">The Ancestors</div>
         <div class="card-sub">One use only</div>
       </div>
     </div>

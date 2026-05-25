@@ -6,16 +6,16 @@
   --bg: #1a1208;
   --surface: rgba(240,232,208,0.06);
   --border: rgba(240,232,208,0.08);
-  --text: #c8b898;
-  --text-bright: #f0e8d0;
+  --text: #ddd0aa;
+  --text-bright: #f8f0e0;
   --gold: #d4a84a;
-  --farmer: #c8980a;
-  --farmer-bg: rgba(200,152,10,0.08);
-  --farmer-border: rgba(200,152,10,0.2);
-  --emu: #6a9a30;
-  --emu-bg: rgba(106,154,48,0.08);
-  --emu-border: rgba(106,154,48,0.2);
-  --muted: #5a4a30;
+  --farmer: #6adf50;
+  --farmer-bg: rgba(74,110,58,0.18);
+  --farmer-border: rgba(106,222,80,0.28);
+  --emu: #e0b030;
+  --emu-bg: rgba(122,96,64,0.18);
+  --emu-border: rgba(224,176,48,0.28);
+  --muted: #7a6a50;
   --placeholder-bg: #0f0a04;
   --placeholder-border: #2a1e0e;
   /* Scale type with viewport so full-screen rows stay readable (download used compact rows) */
@@ -50,9 +50,10 @@ html, body {
 
 /* HEADER BAR — thin, stays put */
 .topbar {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 10px 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -61,10 +62,13 @@ html, body {
 .topbar-title {
   font-family: 'Rye', serif;
   font-size: var(--fs-xl);
-  color: var(--gold);
+  color: var(--text-bright);
+  text-align: center;
 }
 
 .topbar-close {
+  position: absolute;
+  right: 20px;
   width: 28px;
   height: 28px;
   border: 1px solid var(--border);
@@ -97,22 +101,22 @@ html, body {
 /* EACH ROW */
 .row {
   flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 1fr 2.4fr 1fr;
   gap: 10px;
   align-items: stretch;
-  min-height: 0;
 }
 
 /* SIDE CARDS — like the game sidebar cards */
 .card {
-  height: 100%;
-  min-height: 0;
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .card.farmer {
@@ -130,28 +134,31 @@ html, body {
   font-size: var(--fs-lg);
   color: var(--text-bright);
   line-height: 1.2;
+  margin-top: 8px;
+  flex-shrink: 0;
 }
 
 .card-sub {
   font-size: var(--fs-sm);
   color: var(--muted);
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 
 .card-thumb {
-  width: var(--thumb-size);
-  height: var(--thumb-size);
-  background: var(--bg);
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  image-rendering: pixelated;
 }
 .card-thumb img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   image-rendering: pixelated;
-}
+  display: block;
+  }
 
 /* CENTER — mechanic + gif */
 .center {
@@ -168,13 +175,33 @@ html, body {
   flex-direction: column;
   justify-content: center;
   gap: 8px;
+  padding-left: 28px;
 }
 
 .mechanic-title {
   font-family: 'Rye', serif;
   font-size: var(--fs-lg);
-  color: var(--gold);
+  color: var(--text-bright);
 }
+
+/* FACTION COLUMN HEADERS */
+.faction-header {
+  display: grid;
+  grid-template-columns: 1fr 2.4fr 1fr;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.faction-label {
+  font-family: 'Rye', serif;
+  font-size: var(--fs-md);
+  text-align: center;
+  padding: 6px 0;
+  letter-spacing: 0.04em;
+}
+
+.faction-label.farmer { color: var(--farmer); }
+.faction-label.emu    { color: var(--emu); }
 
 .mechanic-text {
   font-size: var(--fs-md);
@@ -225,26 +252,24 @@ html, body {
   color: var(--muted);
 }
 
-/* GIF PLACEHOLDER */
-.gif {
-  flex: 1.2;
-  min-width: 0;
-  background: var(--placeholder-bg);
-  border: 1px dashed var(--placeholder-border);
-  border-radius: 6px;
+
+/* DUAL TOKEN THUMBNAILS (A + B side by side) */
+.card-thumb-pair {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
+  gap: 4px;
 }
 
-.gif-label {
-  font-size: var(--fs-xs);
-  color: var(--muted);
-  font-style: italic;
-  text-align: center;
-  line-height: 1.5;
-}
+.card-thumb-pair img {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  border-radius: 4px;
+  display: block;
+  }
 
 /* NO GIF VARIANT */
 .center.no-gif {
