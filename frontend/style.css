@@ -326,15 +326,15 @@ html, body {
   opacity: 1;
 }
 
-/* ── Defense card max-upgrade glow ──────────────────────────── */
-.token-card.def-maxed {
+/* ── Defense card max-upgrade glow — disabled, upgraded sprites planned ── */
+/* .token-card.def-maxed {
   border-color: #40c8ff;
   animation: def-glow 1.8s ease-in-out infinite;
 }
 @keyframes def-glow {
   0%, 100% { box-shadow: 0 0 6px rgba(64, 200, 255, 0.5); }
   50%       { box-shadow: 0 0 18px rgba(64, 200, 255, 1.0); }
-}
+} */
 
 /* ── Player name ──────────────────────────────────────────────── */
 .panel-name {

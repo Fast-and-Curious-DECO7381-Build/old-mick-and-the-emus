@@ -204,7 +204,10 @@ function _setDefCard(side, def, activeRemaining, total, upgrade, state) {
   if (fillEl)  fillEl.style.height = `${(fillPct * 100).toFixed(1)}%`;
 
   if (cardEl) {
-    cardEl.classList.toggle("def-maxed", upgrade >= 1);
+    const imgEl   = cardEl.querySelector('img');
+    const faction = side === 'p1' ? 'm' : 'e';
+    const lvl     = upgrade >= 1 ? 2 : 1;
+    if (imgEl) imgEl.src = `assets/images/tokens/def-${faction}-level${lvl}.png`;
   }
 }
 
