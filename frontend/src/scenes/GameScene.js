@@ -1714,20 +1714,20 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const msgs = {
-      homestead_destroyed: ["THE EMUS WIN",  "The Grain Stash is gone. No wheat, no operation. Old Mick has nothing left to protect."],
-      nest_destroyed:      ["OLD MICK WINS", "The Bird Council is gone. The ostriches went home. The emus have no idea what they're doing anymore."],
-      attrition: G.winner === "p1"
-        ? ["OLD MICK WINS", "The scrublands go quiet. The outback belongs to Old Mick."]
-        : ["THE EMUS WIN",  "No grain, no operation. The pack eats well tonight."],
-    };
-    const [title, sub] = msgs[G.win_reason] ?? [`${G.winner?.toUpperCase()} WINS`, ""];
-    this._winTitleTxt.setText(title);
-    this._winSubTxt.setText(sub);
-
     const p1Hq = hqCellLabel(G.hq_revealed?.p1);
     const p2Hq = hqCellLabel(G.hq_revealed?.p2);
-    this._winHqCoordsTxt.setText(`OLD MICK: ${p1Hq}, THE EMUS: ${p2Hq}`);
+
+    const msgs = {
+      homestead_destroyed: ["THE EMUS WIN",  `The Emus found the Grain Stash at ${p1Hq}. No wheat, no operation. Old Mick and his men have lost.`,  `Bird Council at ${p2Hq}, safe.`],
+      nest_destroyed:      ["OLD MICK WINS", `Old Mick and his men found the Bird Council at ${p2Hq}. The ostriches are all slaughtered. The Emus have lost.`, `Grain Stash at ${p1Hq}, safe.`],
+      attrition: G.winner === "p1"
+        ? ["OLD MICK WINS", `All nests have been destroyed. The scrublands go quiet. Old Mick wins.`, `Grain Stash at ${p1Hq}, Bird Council at ${p2Hq}, both undetected.`]
+        : ["THE EMUS WIN",  `The farmlands have been razed. The outback belongs to the pack. The Emus win.`, `Grain Stash at ${p1Hq}, Bird Council at ${p2Hq}, both undetected.`],
+    };
+    const [title, sub, hqLine] = msgs[G.win_reason] ?? [`${G.winner?.toUpperCase()} WINS`, "", ""];
+    this._winTitleTxt.setText(title);
+    this._winSubTxt.setText(sub);
+    this._winHqCoordsTxt.setText(hqLine ?? "");
 
     const layout = this._winLayout;
     const subBottom = this._winSubTxt.y + this._winSubTxt.height;
