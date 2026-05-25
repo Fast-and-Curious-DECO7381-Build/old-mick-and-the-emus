@@ -154,7 +154,7 @@ html, body {
 .token-cards {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 25px;
   flex: 1;
   overflow: hidden;
 }
