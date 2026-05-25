@@ -91,20 +91,6 @@ function hqCellLabel(pos) {
   return `${colLabel(pos[0])}${pos[1] + 1}`;
 }
 
-// ─── Idle Animation Helpers ───────────────────────────────────────────────────
-
-function addAttackIdle(scene, image, posRef) {
-  scene.time.addEvent({
-    delay: 120,
-    loop: true,
-    callback: () => {
-      if (!image.visible || posRef.x == null) return;
-      image.x = posRef.x + Phaser.Math.Between(-1, 1);
-      image.y = posRef.y + Phaser.Math.Between(0, 1);
-    }
-  });
-}
-
 // ─── Direction cycling tables ─────────────────────────────────────────────────
 
 // Old Micks atk cycles towards enemy lower-right: E → SE → S → E
@@ -116,6 +102,30 @@ const P2_ATK_CYCLE = ["W", "NW", "N"];
 const DEFAULT_DIR = {
   p1: { atk_a: "E",  atk_b: "SE", def: null },
   p2: { atk_a: "W",  atk_b: "NW", def: null },
+};
+
+// Frame rates (fps) for each token animation — edit these to tune timing
+const TOKEN_FPS = {
+  anim_mick_atk_a: 4,
+  anim_mick_atk_b: 4,
+  anim_emu_atk_a:  4,
+  anim_emu_atk_b:  4,
+  anim_mick_def:   3,
+  anim_mick_def_2: 3,
+  anim_emu_def:    3,
+  anim_emu_def_2:  3,
+};
+
+// Maps each token sprite key to its owning side and animation key
+const TOKEN_ANIM = {
+  p1_atk_a: { side: "p1", key: "anim_mick_atk_a" },
+  p1_atk_b: { side: "p1", key: "anim_mick_atk_b" },
+  p1_def:   { side: "p1", key: "anim_mick_def"   },
+  p1_def_2: { side: "p1", key: "anim_mick_def_2" },
+  p2_atk_a: { side: "p2", key: "anim_emu_atk_a"  },
+  p2_atk_b: { side: "p2", key: "anim_emu_atk_b"  },
+  p2_def:   { side: "p2", key: "anim_emu_def"    },
+  p2_def_2: { side: "p2", key: "anim_emu_def_2"  },
 };
 
 // ─── Scene ────────────────────────────────────────────────────────────────────
@@ -162,6 +172,7 @@ export class GameScene extends Phaser.Scene {
     this._buildBoardImage();
     this._drawGridOnce();
     this._buildTokenSprites();
+    this._createTokenAnimations();
     this._buildNukePreviewSprites();
     this._buildHqSprites();
     this._buildWinOverlay();
@@ -311,7 +322,7 @@ export class GameScene extends Phaser.Scene {
     this.tokenIdlePos    = {};
 
     for (const [key, tex] of Object.entries(TEX)) {
-      this.tokenSprites[key] = this.add.image(0, 0, tex)
+      this.tokenSprites[key] = this.add.sprite(0, 0, tex, 0)
         .setDisplaySize(sz, sz).setDepth(11).setVisible(false);
 
       if (key.endsWith("_a") || key.endsWith("_b")) {
@@ -326,7 +337,6 @@ export class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(13).setVisible(false);
 
         this.tokenIdlePos[key] = { x: null, y: null };
-        addAttackIdle(this, this.tokenSprites[key], this.tokenIdlePos[key]);
       }
 
       this.tokenWarnLabels[key] = this.add.text(0, 0, "", {
@@ -334,6 +344,22 @@ export class GameScene extends Phaser.Scene {
         color: "#ffffff", backgroundColor: "#cc0000",
         padding: { x: 5, y: 3 },
       }).setOrigin(0.5, 0).setDepth(20).setVisible(false);
+    }
+  }
+
+  _createTokenAnimations() {
+    const defs = [
+      { key: "anim_mick_atk_a", tex: "tok_mick_atk_a" },
+      { key: "anim_mick_atk_b", tex: "tok_mick_atk_b" },
+      { key: "anim_emu_atk_a",  tex: "tok_emu_atk_a"  },
+      { key: "anim_emu_atk_b",  tex: "tok_emu_atk_b"  },
+      { key: "anim_mick_def",   tex: "tok_mick_def"   },
+      { key: "anim_mick_def_2", tex: "tok_mick_def_2" },
+      { key: "anim_emu_def",    tex: "tok_emu_def"    },
+      { key: "anim_emu_def_2",  tex: "tok_emu_def_2"  },
+    ];
+    for (const { key, tex } of defs) {
+      this.anims.create({ key, frames: this.anims.generateFrameNumbers(tex), frameRate: TOKEN_FPS[key], repeat: -1 });
     }
   }
 
@@ -1576,6 +1602,17 @@ export class GameScene extends Phaser.Scene {
       sprite.setPosition(x, spriteY).setAngle(0).setAlpha(alpha).setVisible(true);
       if (this.tokenIdlePos[key]) {
         sprite.setPosition(this.tokenIdlePos[key].x, this.tokenIdlePos[key].y);
+      }
+
+      const activeSide = this.gameState?.battle?.active_side ?? null;
+      const animConf   = TOKEN_ANIM[spriteKey];
+      if (animConf) {
+        if (activeSide === animConf.side) {
+          sprite.play(animConf.key, true);
+        } else {
+          sprite.anims.stop();
+          sprite.setFrame(0);
+        }
       }
 
       if (stale) {
