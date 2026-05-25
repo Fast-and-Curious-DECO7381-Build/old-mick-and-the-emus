@@ -966,7 +966,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   _showTurnOverlay(side) {
-    const label = side === "p1" ? "OLD MICKS' TURN" : "THE EMUS' TURN";
+    const label = side === "p1" ? "OLD MICK'S TURN" : "THE EMUS' TURN";
     const sub = this.gameState?.manual_controls
       ? "Click your side to place tokens, then press END TURN"
       : "Arrange physical tokens and confirm with markers";
@@ -1716,9 +1716,9 @@ export class GameScene extends Phaser.Scene {
 
     const msgs = {
       homestead_destroyed: ["THE EMUS WIN",  "The Grain Stash is gone. No wheat, no operation. Old Mick has nothing left to protect."],
-      nest_destroyed:      ["OLD MICKS WIN", "The Bird Council is gone. The ostriches went home. The emus have no idea what they're doing anymore."],
+      nest_destroyed:      ["OLD MICK WINS", "The Bird Council is gone. The ostriches went home. The emus have no idea what they're doing anymore."],
       attrition: G.winner === "p1"
-        ? ["OLD MICKS WIN", "The scrublands go quiet. The outback belongs to Old Mick."]
+        ? ["OLD MICK WINS", "The scrublands go quiet. The outback belongs to Old Mick."]
         : ["THE EMUS WIN",  "No grain, no operation. The pack eats well tonight."],
     };
     const [title, sub] = msgs[G.win_reason] ?? [`${G.winner?.toUpperCase()} WINS`, ""];
@@ -1727,7 +1727,7 @@ export class GameScene extends Phaser.Scene {
 
     const p1Hq = hqCellLabel(G.hq_revealed?.p1);
     const p2Hq = hqCellLabel(G.hq_revealed?.p2);
-    this._winHqCoordsTxt.setText(`OLD MICKS: ${p1Hq}, THE EMUS: ${p2Hq}`);
+    this._winHqCoordsTxt.setText(`OLD MICK: ${p1Hq}, THE EMUS: ${p2Hq}`);
 
     const layout = this._winLayout;
     const subBottom = this._winSubTxt.y + this._winSubTxt.height;

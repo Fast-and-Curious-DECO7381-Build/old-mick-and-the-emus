@@ -320,7 +320,7 @@ function _showAttackResult(text, side) {
 function onEvents(events) {
   for (const ev of events) {
     if (ev.type === "attack_result") {
-      const byLabel = ev.by === "p1" ? "OLD MICKS" : "THE EMUS";
+      const byLabel = ev.by === "p1" ? "OLD MICK" : "THE EMUS";
       const count   = ev.successful ?? 0;
       _showAttackResult(
         `${count} SUCCESSFUL ATTACK${count !== 1 ? "S" : ""} BY ${byLabel}`,
