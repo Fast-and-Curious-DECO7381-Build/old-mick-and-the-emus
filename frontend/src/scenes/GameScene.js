@@ -386,8 +386,8 @@ export class GameScene extends Phaser.Scene {
   _buildWinOverlay() {
     const cx = CANVAS_W / 2;
     const cy = CANVAS_H / 2;
-    const panelW = 620;
-    const panelH = 310;
+    const panelW = 720;
+    const panelH = 270;
 
     this._winLayout = {
       panelW,
@@ -397,9 +397,9 @@ export class GameScene extends Phaser.Scene {
       subWrapW: 340,
       coordsY: 8,
       coordsGap: 10,
-      hqX: 228,
-      hqY: 72,
-      hqSize: 76,
+      hqX: 265,
+      hqY: 0,
+      hqSize: 150,
       hqGap: 14,
       hintY: 98,
       hintGap: 18,
@@ -414,38 +414,38 @@ export class GameScene extends Phaser.Scene {
 
     this.winContainer = this.add.container(cx, cy).setDepth(40).setVisible(false);
 
-    const bg = this.add.rectangle(0, 0, panelW, panelH, 0x080502, 0.96)
-      .setStrokeStyle(2, 0xd4a030, 1);
+    const bg = this.add.rectangle(0, 0, panelW, panelH, 0x3d2e14, 0.96)
+      .setStrokeStyle(2, 0xb08828, 1);
 
     this._winTitleTxt = this.add.text(0, this._winLayout.titleY, "", {
-      fontFamily: FONT_TITLE, fontSize: "36px", fontStyle: "bold",
+      fontFamily: FONT_TITLE, fontSize: "24px", fontStyle: "bold",
       color: "#ffe070", stroke: "#3a2010", strokeThickness: 4,
     }).setOrigin(0.5);
 
     this._winSubTxt = this.add.text(0, this._winLayout.subY, "", {
       fontFamily: FONT_LABEL, fontSize: "15px",
-      color: "#f0c080", align: "center", wordWrap: { width: this._winLayout.subWrapW },
+      color: "#d4a870", align: "center", wordWrap: { width: this._winLayout.subWrapW },
     }).setOrigin(0.5, 0);
 
     this._winHqCoordsTxt = this.add.text(0, this._winLayout.coordsY, "", {
-      fontFamily: FONT_MONO, fontSize: "11px", color: "#c8a060", align: "center",
+      fontFamily: FONT_MONO, fontSize: "11px", color: "#a07840", align: "center",
     }).setOrigin(0.5);
 
-    this._winHintTxt = this.add.text(0, this._winLayout.hintY, "Choose a mode to start again.", {
-      fontFamily: FONT_MONO, fontSize: "10px", color: "#6a5030",
+    this._winHintTxt = this.add.text(0, this._winLayout.hintY, "", {
+      fontFamily: FONT_MONO, fontSize: "10px", color: "#785828",
     }).setOrigin(0.5);
 
     this._playAgainBtn = this.add.container(0, this._winLayout.buttonY).setSize(220, 34).setVisible(false);
-    this._playAgainBtnBg = this.add.rectangle(0, 0, 220, 34, 0x1a1208)
-      .setStrokeStyle(2, 0xd4a030, 1)
+    this._playAgainBtnBg = this.add.rectangle(0, 0, 220, 34, 0x2a1e08)
+      .setStrokeStyle(2, 0xb08828, 1)
       .setInteractive({ useHandCursor: true });
     this._playAgainBtnTxt = this.add.text(0, 0, "PLAY AGAIN", {
       fontFamily: "'Press Start 2P'",
       fontSize: "9px",
-      color: "#f0e060",
+      color: "#f0d060",
     }).setOrigin(0.5);
-    this._playAgainBtnBg.on("pointerover", () => this._playAgainBtnBg.setFillStyle(0x2e2010));
-    this._playAgainBtnBg.on("pointerout", () => this._playAgainBtnBg.setFillStyle(0x1a1208));
+    this._playAgainBtnBg.on("pointerover", () => this._playAgainBtnBg.setFillStyle(0x3a2a10));
+    this._playAgainBtnBg.on("pointerout", () => this._playAgainBtnBg.setFillStyle(0x2a1e08));
     this._playAgainBtnBg.on("pointerdown", (_pointer, _localX, _localY, event) => {
       event?.stopPropagation?.();
       stopSfx(this, "sfx_victory");
@@ -1737,13 +1737,10 @@ export class GameScene extends Phaser.Scene {
     );
     this._winHqCoordsTxt.setY(coordsY);
 
-    const hqTop = coordsY + this._winHqCoordsTxt.height / 2 + layout.hqGap;
-    const hqY = Math.max(layout.hqY, hqTop + layout.hqSize / 2);
-    this._winHqLeft.setY(hqY);
-    this._winHqRight.setY(hqY);
+    this._winHqLeft.setPosition(-layout.hqX, layout.hqY);
+    this._winHqRight.setPosition(layout.hqX, layout.hqY);
 
-    const hqBottom = hqY + layout.hqSize / 2;
-    const minHintY = hqBottom + layout.hintGap + this._winHintTxt.height / 2;
+    const minHintY = coordsY + this._winHqCoordsTxt.height / 2 + layout.hintGap + this._winHintTxt.height / 2;
     const minButtonY = minHintY + this._winHintTxt.height / 2 + layout.buttonGap + layout.buttonH / 2;
     const maxButtonY = layout.panelH / 2 - layout.bottomPad - layout.buttonH / 2;
     const buttonY = Math.min(Math.max(layout.buttonY, minButtonY), maxButtonY);
