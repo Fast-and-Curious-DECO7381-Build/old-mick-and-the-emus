@@ -244,21 +244,22 @@ html, body {
 
 .card-token-name {
   font-family: 'Press Start 2P', system-ui;
-  font-size: 9px;
+  font-size: 11px;
   color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   line-height: 1.4;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
 }
 
 .card-label {
   font-family: 'Press Start 2P', system-ui;
-  font-size: 8px;
-  color: #2a1a08;
+  font-size: 10px;
+  color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  opacity: 0.85;
+  opacity: 1;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.7);
 }
 
 .card-number {
