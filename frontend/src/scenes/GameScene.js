@@ -86,6 +86,7 @@ function posLabel(tok) {
   return `${colLabel(tok.col)}${tok.row + 1}`;
 }
 
+<<<<<<< Updated upstream
 function hqCellLabel(pos) {
   if (!Array.isArray(pos) || pos[0] == null || pos[1] == null) return "—";
   return `${colLabel(pos[0])}${pos[1] + 1}`;
@@ -105,6 +106,8 @@ function addAttackIdle(scene, image, posRef) {
   });
 }
 
+=======
+>>>>>>> Stashed changes
 // ─── Direction cycling tables ─────────────────────────────────────────────────
 
 // Old Micks atk cycles towards enemy lower-right: E → SE → S → E
@@ -116,6 +119,18 @@ const P2_ATK_CYCLE = ["W", "NW", "N"];
 const DEFAULT_DIR = {
   p1: { atk_a: "E",  atk_b: "SE", def: null },
   p2: { atk_a: "W",  atk_b: "NW", def: null },
+};
+
+// ─── Sprite animation config — edit fps / frames here per token ──────────────
+const SPRITE_ANIMS = {
+  p1_atk_a: { animKey: "anim_p1_atk_a", texKey: "tok_mick_atk_a", frames: 4, fps: 4 },
+  p1_atk_b: { animKey: "anim_p1_atk_b", texKey: "tok_mick_atk_b", frames: 4, fps: 4 },
+  p1_def:   { animKey: "anim_p1_def",   texKey: "tok_mick_def",   frames: 2, fps: 3 },
+  p1_def_2: { animKey: "anim_p1_def_2", texKey: "tok_mick_def_2", frames: 3, fps: 3 },
+  p2_atk_a: { animKey: "anim_p2_atk_a", texKey: "tok_emu_atk_a",  frames: 3, fps: 4 },
+  p2_atk_b: { animKey: "anim_p2_atk_b", texKey: "tok_emu_atk_b",  frames: 3, fps: 4 },
+  p2_def:   { animKey: "anim_p2_def",   texKey: "tok_emu_def",    frames: 2, fps: 3 },
+  p2_def_2: { animKey: "anim_p2_def_2", texKey: "tok_emu_def_2",  frames: 3, fps: 3 },
 };
 
 // ─── Scene ────────────────────────────────────────────────────────────────────
@@ -161,6 +176,7 @@ export class GameScene extends Phaser.Scene {
 
     this._buildBoardImage();
     this._drawGridOnce();
+    this._createAnims();
     this._buildTokenSprites();
     this._buildNukePreviewSprites();
     this._buildHqSprites();
@@ -291,6 +307,19 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  _createAnims() {
+    for (const { animKey, texKey, frames, fps } of Object.values(SPRITE_ANIMS)) {
+      if (!this.anims.exists(animKey)) {
+        this.anims.create({
+          key: animKey,
+          frames: this.anims.generateFrameNumbers(texKey, { start: 0, end: frames - 1 }),
+          frameRate: fps,
+          repeat: -1,
+        });
+      }
+    }
+  }
+
   _buildTokenSprites() {
     const sz  = CELL * 0.88;
     const TEX = {
@@ -308,10 +337,9 @@ export class GameScene extends Phaser.Scene {
     this.tokenBadges     = {};
     this.tokenArrows     = {};
     this.tokenWarnLabels = {};
-    this.tokenIdlePos    = {};
 
     for (const [key, tex] of Object.entries(TEX)) {
-      this.tokenSprites[key] = this.add.image(0, 0, tex)
+      this.tokenSprites[key] = this.add.sprite(0, 0, tex)
         .setDisplaySize(sz, sz).setDepth(11).setVisible(false);
 
       if (key.endsWith("_a") || key.endsWith("_b")) {
@@ -337,12 +365,15 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+<<<<<<< Updated upstream
   _buildNukePreviewSprites() {
     const sz = CELL * 0.92;
     this.nukePreviewSprites = {
       p1: this.add.image(0, 0, "tok_mick_nuke").setDisplaySize(sz, sz).setDepth(12).setVisible(false),
       p2: this.add.image(0, 0, "tok_emu_nuke").setDisplaySize(sz, sz).setDepth(12).setVisible(false),
     };
+=======
+>>>>>>> Stashed changes
   }
 
   _buildHqSprites() {
@@ -1543,10 +1574,18 @@ export class GameScene extends Phaser.Scene {
       const vis    = tok && tok.col != null && tok.row != null;
 
       if (!vis) {
+<<<<<<< Updated upstream
         if (this.tokenIdlePos[key]) {
           this.tokenIdlePos[key].x = null;
           this.tokenIdlePos[key].y = null;
         }
+=======
+        sprite.stop?.();
+        sprite.setVisible(false);
+        badge?.setVisible(false);
+        arrow?.setVisible(false);
+        warn?.setVisible(false);
+>>>>>>> Stashed changes
         return;
       }
 
@@ -1557,12 +1596,15 @@ export class GameScene extends Phaser.Scene {
         ? (side === "p1" ? (G?.def_tier_p1 ?? 0) : (G?.def_tier_p2 ?? 0))
         : (G?.atk_tiers?.[side]?.[role] ?? 0);
 
+<<<<<<< Updated upstream
       const spriteY = y - 1;
       if (this.tokenIdlePos[key]) {
         this.tokenIdlePos[key].x = x;
         this.tokenIdlePos[key].y = spriteY;
       }
 
+=======
+>>>>>>> Stashed changes
       if (tier > 0 && !stale) {
         const haloColor = side === "p1" ? 0xffd060 : 0x60ef50;
         const haloAlpha = 0.12 + tier * 0.08;
@@ -1573,10 +1615,16 @@ export class GameScene extends Phaser.Scene {
       g.fillStyle(0x000000, 0.28 * alpha);
       g.fillEllipse(x, y + ch * 0.30, cw * 0.55, ch * 0.15);
 
+<<<<<<< Updated upstream
       sprite.setPosition(x, spriteY).setAngle(0).setAlpha(alpha).setVisible(true);
       if (this.tokenIdlePos[key]) {
         sprite.setPosition(this.tokenIdlePos[key].x, this.tokenIdlePos[key].y);
       }
+=======
+      sprite.setPosition(x, y - 1).setAngle(0).setAlpha(alpha).setVisible(true);
+      const animCfg = SPRITE_ANIMS[spriteKey];
+      if (animCfg) sprite.play(animCfg.animKey, true);
+>>>>>>> Stashed changes
 
       if (stale) {
         g.lineStyle(1, 0xfff080, 0.50);

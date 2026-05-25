@@ -15,17 +15,17 @@ export class BootScene extends Phaser.Scene {
     // Optional intro title — missing file is OK (IntroScene uses text fallback)
     this.load.image("intro_title",    "assets/images/intro_title.png");
 
-    // Attack tokens
-    this.load.image("tok_mick_atk_a", "assets/images/tokens/atk-m-1.png");
-    this.load.image("tok_mick_atk_b", "assets/images/tokens/atk-m-2.png");
-    this.load.image("tok_emu_atk_a",  "assets/images/tokens/atk-e-1.png");
-    this.load.image("tok_emu_atk_b",  "assets/images/tokens/atk-e-2.png");
+    // Attack tokens — sprite sheets (128×128 frames, vertical strip)
+    this.load.spritesheet("tok_mick_atk_a", "assets/images/sprites/atk-m-1-sprite.png", { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet("tok_mick_atk_b", "assets/images/sprites/atk-m-2-sprite.png", { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet("tok_emu_atk_a",  "assets/images/sprites/atk-e-1-sprite.png", { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet("tok_emu_atk_b",  "assets/images/sprites/atk-e-2-sprite.png", { frameWidth: 128, frameHeight: 128 });
 
-    // Defense tokens (level 1 and level 2)
-    this.load.image("tok_mick_def",     "assets/images/tokens/def-m-level1.png");
-    this.load.image("tok_mick_def_2",   "assets/images/tokens/def-m-level2.png");
-    this.load.image("tok_emu_def",      "assets/images/tokens/def-e-level1.png");
-    this.load.image("tok_emu_def_2",    "assets/images/tokens/def-e-level2.png");
+    // Defense tokens — sprite sheets (level 1 and level 2)
+    this.load.spritesheet("tok_mick_def",   "assets/images/sprites/def-m-level1-sprite.png", { frameWidth: 117, frameHeight: 128 });
+    this.load.spritesheet("tok_mick_def_2", "assets/images/sprites/def-m-level2-sprite.png", { frameWidth: 117, frameHeight: 128 });
+    this.load.spritesheet("tok_emu_def",    "assets/images/sprites/def-e-level1-sprite.png", { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet("tok_emu_def_2",  "assets/images/sprites/def-e-level2-sprite.png", { frameWidth: 128, frameHeight: 128 });
 
     // Nuke/wild tokens
     this.load.image("tok_mick_nuke",  "assets/images/tokens/wild-token-m-keith.png");
@@ -71,8 +71,7 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     const WHITE_BG_KEYS = [
-      "tok_mick_atk_a", "tok_mick_atk_b", "tok_mick_def", "tok_mick_def_2", "tok_mick_nuke",
-      "tok_emu_atk_a",  "tok_emu_atk_b",  "tok_emu_def",  "tok_emu_def_2",  "tok_emu_nuke",
+      "tok_mick_nuke", "tok_emu_nuke",
       "hq_grain_stash", "hq_grain_stash_dead", "hq_bird_council", "hq_bird_council_dead",
       "cell_mick", "cell_emu", "hard_mick", "hard_emu", "soft_mick", "soft_emu",
     ];
