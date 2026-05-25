@@ -13,12 +13,12 @@ export function buildHelpPopupTemplate() {
       @import url('https://fonts.googleapis.com/css2?family=Rye&family=Barlow:wght@400;600;700&display=swap');
       .help-popup-root, .help-popup-root *, .help-popup-root *::before, .help-popup-root *::after { box-sizing: border-box; margin: 0; padding: 0; }
       .help-popup-root {
-        --bg:#1a1208; --surface:rgba(240,232,208,0.06); --border:rgba(240,232,208,0.08);
-        --text:#ddd0aa; --text-bright:#f8f0e0; --gold:#d4a84a; --muted:#7a6a50;
-        --farmer:#6adf50; --emu:#e0b030;
-        --farmer-bg:rgba(74,110,58,0.18); --farmer-border:rgba(106,222,80,0.28);
-        --emu-bg:rgba(122,96,64,0.18); --emu-border:rgba(224,176,48,0.28);
-        --placeholder-bg:#0f0a04; --placeholder-border:#2a1e0e;
+        --bg:#ece4d4; --surface:rgba(0,0,0,0.04); --border:rgba(0,0,0,0.10);
+        --text:#4a3c28; --text-bright:#1e140a; --gold:#9e6e10; --muted:#8a7560;
+        --farmer:#3a8c22; --emu:#b07818;
+        --farmer-bg:rgba(58,140,34,0.10); --farmer-border:rgba(58,140,34,0.30);
+        --emu-bg:rgba(176,120,24,0.10); --emu-border:rgba(176,120,24,0.30);
+        --placeholder-bg:#e8e0d0; --placeholder-border:#c8b898;
         width:100vw; height:100vh; background:var(--bg); color:var(--text); font-family:'Barlow',sans-serif; pointer-events:auto;
       }
       .help-screen { width:100vw; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
@@ -35,6 +35,7 @@ export function buildHelpPopupTemplate() {
       .help-card.emu { background:var(--emu-bg); border:1px solid var(--emu-border); }
       .help-thumb { flex:1; min-height:0; width:100%; border-radius:4px; overflow:hidden; }
       .help-thumb img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; display:block; }
+      .help-card.wild .help-thumb img { transform:scale(1.3); transform-origin:center center; }
       .help-thumb-pair { flex:1; min-height:0; display:flex; gap:4px; }
       .help-thumb-pair img { flex:1; min-width:0; height:100%; object-fit:contain; image-rendering:pixelated; border-radius:4px; display:block; }
       .help-card-name { font-family:'Rye',serif; font-size:13px; color:var(--text-bright); line-height:1.2; margin-top:8px; flex-shrink:0; }
@@ -73,7 +74,7 @@ export function buildHelpPopupTemplate() {
           ${row(card('farmer', 'assets/images/tokens/hq-mick.png', 'Grain Stash', 'Secret HQ - hidden'), winMechanic(), card('emu', 'assets/images/tokens/hq-emu.png', 'Bird Council', 'Secret HQ - hidden'))}
           ${row(card('farmer', 'assets/images/tokens/atk-m-1.png', 'Rifleman A / B x 2', '', 'assets/images/tokens/atk-m-2.png'), attackMechanic(), card('emu', 'assets/images/tokens/atk-e-1.png', 'Emu Pack A / B x 2', '', 'assets/images/tokens/atk-e-2.png'))}
           ${row(card('farmer', 'assets/images/tokens/def-m-level1.png', 'Old Mick x 1'), defenseMechanic(), card('emu', 'assets/images/tokens/def-e-level1.png', 'Cassowary x 1'))}
-          ${row(card('farmer', 'assets/images/tokens/wild-token-m-keith.png', "Keith's Cannon", 'One use only'), wildMechanic(), card('emu', 'assets/images/tokens/wild-token-e-dino.png', 'The Ancestors', 'One use only'))}
+          ${row(card('farmer wild', 'assets/images/tokens/wild-token-m-keith.png', "Keith's Cannon", 'One use only'), wildMechanic(), card('emu wild', 'assets/images/tokens/wild-token-e-dino.png', 'The Ancestors', 'One use only'))}
           ${row(card('farmer', 'assets/images/tiles/cell-m-farm.png', 'Farms', 'Your cells'), terrainMechanic(), card('emu', 'assets/images/tiles/cell-e-nest.png', 'Nests', 'Your cells'))}
         </div>
       </div>

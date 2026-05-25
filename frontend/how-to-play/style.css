@@ -3,21 +3,21 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #1a1208;
-  --surface: rgba(240,232,208,0.06);
-  --border: rgba(240,232,208,0.08);
-  --text: #ddd0aa;
-  --text-bright: #f8f0e0;
-  --gold: #d4a84a;
-  --farmer: #6adf50;
-  --farmer-bg: rgba(74,110,58,0.18);
-  --farmer-border: rgba(106,222,80,0.28);
-  --emu: #e0b030;
-  --emu-bg: rgba(122,96,64,0.18);
-  --emu-border: rgba(224,176,48,0.28);
-  --muted: #7a6a50;
-  --placeholder-bg: #0f0a04;
-  --placeholder-border: #2a1e0e;
+  --bg: #ece4d4;
+  --surface: rgba(0,0,0,0.04);
+  --border: rgba(0,0,0,0.10);
+  --text: #4a3c28;
+  --text-bright: #1e140a;
+  --gold: #9e6e10;
+  --farmer: #3a8c22;
+  --farmer-bg: rgba(58,140,34,0.10);
+  --farmer-border: rgba(58,140,34,0.30);
+  --emu: #b07818;
+  --emu-bg: rgba(176,120,24,0.10);
+  --emu-border: rgba(176,120,24,0.30);
+  --muted: #8a7560;
+  --placeholder-bg: #e8e0d0;
+  --placeholder-border: #c8b898;
   /* Scale type with viewport so full-screen rows stay readable (download used compact rows) */
   --fs-xs: clamp(12px, 1.35vmin, 16px);
   --fs-sm: clamp(14px, 1.55vmin, 19px);
@@ -159,6 +159,11 @@ html, body {
   image-rendering: pixelated;
   display: block;
   }
+
+.card.wild .card-thumb img {
+  transform: scale(1.3);
+  transform-origin: center center;
+}
 
 /* CENTER — mechanic + gif */
 .center {
