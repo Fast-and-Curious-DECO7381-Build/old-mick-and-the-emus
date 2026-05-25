@@ -16,7 +16,6 @@ DEF_ZONE_RADIUS_T1 = 1
 DEF_ZONE_RADIUS_T2 = 2
 DEF_UPGRADE_REMAINING_CELLS = 12
 NUKE_UNLOCK_REMAINING_CELLS = 8
-NUKE_RESOURCE_HITS = 5
 SOFT_TERRAIN_HP = 2
 HARD_TERRAIN_HP = 5
 
@@ -317,7 +316,7 @@ class GameModel:
         events: list[dict] = [{"type": "nuke_triggered", "side": attacker, "center": list(center)}]
 
         cx, cy = center
-        resource_candidates: list[tuple[int, int]] = []
+        hq_destroyed = False
         for row in range(cy - 1, cy + 2):
             for col in range(cx - 1, cx + 2):
                 if not (0 <= col < GRID_COLS and 0 <= row < GRID_ROWS):
@@ -338,23 +337,34 @@ class GameModel:
                 if cell in self.destroyed:
                     continue
                 if self._is_hq_cell(enemy_side, cell):
+                    self.damage[cell] = max(self.damage.get(cell, 0), self._cell_required_hp(cell, enemy_side, def_protection_active=False))
+                    self.destroyed.add(cell)
+                    self.hq_reveal[enemy_side] = list(cell)
+                    self.winner = attacker
+                    self.win_reason = ("homestead" if enemy_side == "p1" else "nest") + "_destroyed"
+                    hq_destroyed = True
+                    events.append({
+                        "type": "cell_destroyed",
+                        "cell": cell,
+                        "side": enemy_side,
+                        "value": self._resource_value(enemy_side, cell),
+                        "nuke": True,
+                    })
+                    events.append({"type": "hq_destroyed", "side": enemy_side, "nuke": True})
                     continue
                 if self._is_resource_cell(cell, enemy_side):
-                    resource_candidates.append(cell)
-
-        for cell in self.rng.sample(resource_candidates, k=min(NUKE_RESOURCE_HITS, len(resource_candidates))):
-            self.damage[cell] = max(self.damage.get(cell, 0), self._cell_required_hp(cell, enemy_side, def_protection_active=False))
-            self.destroyed.add(cell)
-            events.append({
-                "type": "cell_destroyed",
-                "cell": cell,
-                "side": enemy_side,
-                "value": self._resource_value(enemy_side, cell),
-                "nuke": True,
-            })
+                    self.damage[cell] = max(self.damage.get(cell, 0), self._cell_required_hp(cell, enemy_side, def_protection_active=False))
+                    self.destroyed.add(cell)
+                    events.append({
+                        "type": "cell_destroyed",
+                        "cell": cell,
+                        "side": enemy_side,
+                        "value": self._resource_value(enemy_side, cell),
+                        "nuke": True,
+                    })
 
         self._sync_tiers_from_progress()
-        if self._destroyed_resource_cells(enemy_side) >= self._attrition_threshold(enemy_side):
+        if not hq_destroyed and self._destroyed_resource_cells(enemy_side) >= self._attrition_threshold(enemy_side):
             self.winner = attacker
             self.win_reason = "attrition"
             events.append({"type": "attrition_win", "side": enemy_side})
@@ -529,7 +539,6 @@ class GameModel:
             "nuke_available_p1": self._nuke_available("p1"),
             "nuke_available_p2": self._nuke_available("p2"),
             "nuke_unlock_remaining_cells": NUKE_UNLOCK_REMAINING_CELLS,
-            "nuke_resource_hits": NUKE_RESOURCE_HITS,
             "winner": self.winner,
             "win_reason": self.win_reason,
             "hq_revealed": (

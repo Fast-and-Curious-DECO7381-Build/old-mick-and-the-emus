@@ -194,7 +194,9 @@ export function playSfx(scene, key, opts = {}) {
 export function playNukeSfx(scene, key, onComplete) {
   beginSfxLock(scene);
 
+  let sound = null;
   const finish = () => {
+    sound?.destroy?.();
     endSfxLock(scene);
     onComplete?.();
   };
@@ -204,8 +206,8 @@ export function playNukeSfx(scene, key, onComplete) {
     return null;
   }
 
-  const sound = scene.sound.play(key, { volume: _state.sfxVol });
-  if (!sound) {
+  sound = scene.sound.add(key, { volume: _state.sfxVol });
+  if (!sound || !sound.play()) {
     finish();
     return null;
   }

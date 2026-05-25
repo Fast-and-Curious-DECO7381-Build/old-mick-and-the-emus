@@ -168,8 +168,8 @@ Nuke progression:
 - The pending nuke resolves when `ID4` confirms the active side's turn.
 - Nuke affects a `3x3` area centered on the marker.
 - All terrain in the area is destroyed.
-- Up to 5 resource cells in the area are randomly destroyed.
-- HQs are not destroyed by nuke.
+- All resource cells in the area are destroyed.
+- HQs in the area are destroyed by nuke and trigger the same immediate HQ win condition.
 
 ## MVP interaction assumptions
 

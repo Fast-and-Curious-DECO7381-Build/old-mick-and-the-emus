@@ -20,7 +20,7 @@ import {
   COLORS, DIR_VEC, ARROW_CHAR,
   FONT_TITLE, FONT_LABEL, FONT_MONO,
 } from "../constants.js";
-import { playSfx, playBgm, playNukeSfx, stopSfx, beginSfxLock, toggleMute } from "../audio.js";
+import { playSfx, playBgm, playNukeSfx, stopSfx, toggleMute } from "../audio.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1266,11 +1266,11 @@ export class GameScene extends Phaser.Scene {
 
       for (const role of ["atk_a", "atk_b"]) {
         if (s.p1?.[role]?.col != null && s.p1[role].direction)
-          this._drawRay(s.p1[role].col, s.p1[role].row,
+          this._drawRay("p1", s.p1[role].col, s.p1[role].row,
             computeRay(s.p1[role].col, s.p1[role].row, s.p1[role].direction,
                        hardMap, softMap, "p1", destroyedMap, p2TargetMap));
         if (s.p2?.[role]?.col != null && s.p2[role].direction)
-          this._drawRay(s.p2[role].col, s.p2[role].row,
+          this._drawRay("p2", s.p2[role].col, s.p2[role].row,
             computeRay(s.p2[role].col, s.p2[role].row, s.p2[role].direction,
                        hardMap, softMap, "p2", destroyedMap, p1TargetMap));
       }
@@ -1454,23 +1454,27 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Attack ray ─────────────────────────────────────────────────────────────
 
-  _drawRay(startCol, startRow, rayCells) {
+  _drawRay(side, startCol, startRow, rayCells) {
     if (!rayCells?.length) return;
     const g  = this.dynGfx;
     const cw = GRID_DRAW_W / GRID_SIZE, ch = GRID_DRAW_H / GRID_SIZE;
+    const rayColor = side === "p2" ? 0x9faa92 : 0xffe040;
+    const hitTint = side === "p2" ? 0x6f806d : 0xffa000;
+    const softTint = side === "p2" ? 0x7f927a : 0xff8000;
+    const fallbackTint = side === "p2" ? 0x4d5948 : 0x604000;
 
     // Subtle cell tint under the ray
     for (const cell of rayCells) {
       const bx = BOARD_OFF_X + GRID_INSET_X + cell.col * cw;
       const by = BOARD_OFF_Y + GRID_INSET_Y + cell.row * ch;
-      if      (cell.type === "path")    g.fillStyle(0xffe040, 0.12);
-      else if (cell.type === "hit")     g.fillStyle(0xffa000, 0.45);
-      else if (cell.type === "soft")    g.fillStyle(0xff8000, 0.40);
-      else                              g.fillStyle(0x604000, 0.55);
+      if      (cell.type === "path")    g.fillStyle(rayColor, 0.12);
+      else if (cell.type === "hit")     g.fillStyle(hitTint, 0.45);
+      else if (cell.type === "soft")    g.fillStyle(softTint, 0.40);
+      else                              g.fillStyle(fallbackTint, 0.55);
       g.fillRect(bx + 1, by + 1, cw - 2, ch - 2);
     }
 
-    // Yellow dashed line along the ray path
+    // Dashed line along the ray path
     const DASH = 7, GAP = 5;
     let px = cellXY(startCol, startRow).x, py = cellXY(startCol, startRow).y;
     for (const cell of rayCells) {
@@ -1488,7 +1492,7 @@ export class GameScene extends Phaser.Scene {
             const x1 = px + nx * (t + segLen), y1 = py + ny * (t + segLen);
             g.lineStyle(3.5, 0x000000, 0.6);
             g.strokeLineShape(new Phaser.Geom.Line(x0, y0, x1, y1));
-            g.lineStyle(2.5, 0xffe040, 1.0);
+            g.lineStyle(2.5, rayColor, 1.0);
             g.strokeLineShape(new Phaser.Geom.Line(x0, y0, x1, y1));
           }
           t += segLen;
@@ -2050,9 +2054,6 @@ export class GameScene extends Phaser.Scene {
     this.ws.on("state", this._wsStateHandler);
 
     this._wsEventsHandler = (events) => {
-      const hasNuke = events.some((ev) => ev.type === "nuke_triggered");
-      if (hasNuke) beginSfxLock(this);
-
       const nukeCells = events
         .filter((ev) => ev?.nuke && Array.isArray(ev.cell))
         .map((ev) => ev.cell);
@@ -2117,6 +2118,7 @@ export class GameScene extends Phaser.Scene {
     const path   = ev.path  ?? [];
     const token  = ev.token ?? "";
     const isP1   = token.startsWith("p1");
+    const rayColor = isP1 ? 0xffe040 : 0x9faa92;
 
     if (!path.length) return;
 
@@ -2159,10 +2161,10 @@ export class GameScene extends Phaser.Scene {
             this.cameras.main.shake(500, 0.020);
           }
         } else {
-          // Path cell — gold dashed trail
-          g.fillStyle(0xffe040, 0.14);
+          // Path cell trail uses each side's attack colour.
+          g.fillStyle(rayColor, 0.14);
           g.fillRect(bx + 2, by + 2, cw - 4, ch - 4);
-          g.lineStyle(2, 0xffe040, 0.55);
+          g.lineStyle(2, rayColor, 0.55);
           g.strokeRect(bx + 2, by + 2, cw - 4, ch - 4);
         }
       });
